@@ -47,6 +47,7 @@ from .const import (
     DEFAULT_ROOT_DEPTH_CM,
     DEFAULT_TITLE,
     DOMAIN,
+    SOIL_DOC_URL,
 )
 from .discovery import discover_companions
 from .model import AdmissionPolicy, QualityGates, SoilTexture, deficit_to_mm
@@ -267,6 +268,7 @@ class NeverDryCalibratorConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="soil",
             data_schema=_soil_schema(user_input or {}),
             errors=errors,
+            description_placeholders={"soil_doc": SOIL_DOC_URL},
         )
 
     async def async_step_confirm(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -448,7 +450,7 @@ class NeverDryCalibratorOptionsFlow(OptionsFlow):
             step_id="edit_probe_soil",
             data_schema=_soil_schema(user_input or current.settings),
             errors=errors,
-            description_placeholders={"probe": current.name},
+            description_placeholders={"probe": current.name, "soil_doc": SOIL_DOC_URL},
         )
 
     # ── Remove ───────────────────────────────────────────────────

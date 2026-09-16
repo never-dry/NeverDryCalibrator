@@ -89,6 +89,10 @@ SERVICE_MARK_FIELD_CAPACITY = "mark_field_capacity"
 SERVICE_APPLY_DEVICE_OFFSET = "apply_device_offset"
 SERVICE_EXPORT_SAMPLES = "export_samples"
 
+#: Where the field method for choosing a soil texture is written out. Passed
+#: to the soil steps as a placeholder: hassfest refuses URLs inside strings.
+SOIL_DOC_URL = "https://github.com/never-dry/NeverDryCalibrator#which-soil-should-i-pick"
+
 #: Default title of the single integration entry.
 DEFAULT_TITLE = "NeverDry Calibrator"
 

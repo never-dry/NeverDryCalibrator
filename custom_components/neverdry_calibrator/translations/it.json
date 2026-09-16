@@ -23,7 +23,7 @@
       },
       "soil": {
         "title": "Serbatoio del terreno",
-        "description": "Il deficit conta i millimetri mancanti; la sonda risponde sul contenuto d'acqua. Questi valori sono il serbatoio che converte l'uno nell'altro. Se il deficit arriva da NeverDry, usa lo stesso terreno configurato li'. Non sai quale sia? La prova del nastro, due minuti con le mani, e' descritta nella documentazione: https://github.com/never-dry/NeverDryCalibrator#which-soil-should-i-pick",
+        "description": "Il deficit conta i millimetri mancanti; la sonda risponde sul contenuto d'acqua. Questi valori sono il serbatoio che converte l'uno nell'altro. Se il deficit arriva da NeverDry, usa lo stesso terreno configurato li'. Non sai quale sia? La prova del nastro, due minuti con le mani, e' descritta nella documentazione: {soil_doc}",
         "data": {
           "soil_texture": "Tessitura del terreno",
           "root_depth": "Profondita' radicale",
@@ -91,7 +91,7 @@
       },
       "add_probe_soil": {
         "title": "Serbatoio del terreno",
-        "description": "Il serbatoio in cui sta questa sonda. Se il deficit arriva da NeverDry, usa lo stesso terreno configurato li' per quella zona. Non sai quale sia? La prova del nastro, due minuti con le mani, e' descritta nella documentazione: https://github.com/never-dry/NeverDryCalibrator#which-soil-should-i-pick",
+        "description": "Il serbatoio in cui sta questa sonda. Se il deficit arriva da NeverDry, usa lo stesso terreno configurato li' per quella zona. Non sai quale sia? La prova del nastro, due minuti con le mani, e' descritta nella documentazione: {soil_doc}",
         "data": {
           "soil_texture": "Tessitura del terreno",
           "root_depth": "Profondita' radicale",
@@ -121,7 +121,7 @@
       },
       "edit_probe_soil": {
         "title": "Terreno di {probe}",
-        "description": "Correggere il terreno ricalcola la storia raccolta rispetto al nuovo serbatoio e annulla la calibrazione corrente, che va poi riguadagnata sugli stessi dati. I campioni sono misure e restano. Non sai quale sia? La prova del nastro, due minuti con le mani, e' descritta nella documentazione: https://github.com/never-dry/NeverDryCalibrator#which-soil-should-i-pick",
+        "description": "Correggere il terreno ricalcola la storia raccolta rispetto al nuovo serbatoio e annulla la calibrazione corrente, che va poi riguadagnata sugli stessi dati. I campioni sono misure e restano. Non sai quale sia? La prova del nastro, due minuti con le mani, e' descritta nella documentazione: {soil_doc}",
         "data": {
           "soil_texture": "Tessitura del terreno",
           "root_depth": "Profondita' radicale",

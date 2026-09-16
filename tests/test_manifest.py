@@ -83,3 +83,38 @@ def test_every_translation_has_the_same_shape():
     for path in (COMPONENT_ROOT / "translations").glob("*.json"):
         translated = json.loads(path.read_text(encoding="utf-8"))
         assert shape(translated) == shape(base), f"{path.name} does not match strings.json"
+
+
+def test_manifest_keys_are_sorted_the_way_hassfest_wants(manifest):
+    """Domain, name, then alphabetical. Hassfest fails the build otherwise."""
+    keys = list(manifest)
+    assert keys[:2] == ["domain", "name"]
+    assert keys[2:] == sorted(keys[2:])
+
+
+def test_no_translation_string_contains_a_url():
+    """Hassfest refuses URLs inside strings; they belong in description placeholders.
+
+    The guard exists because the natural thing to write, a link in the sentence
+    that needs it, passes every local check and fails only in the published
+    repository.
+    """
+    for path in [COMPONENT_ROOT / "strings.json", *(COMPONENT_ROOT / "translations").glob("*.json")]:
+        text = path.read_text(encoding="utf-8")
+        assert "http://" not in text and "https://" not in text, f"{path.name} contains a URL"
+
+
+def _png_size(path: Path) -> tuple[int, int]:
+    """Width and height from the PNG header, without pulling in an image library."""
+    header = path.read_bytes()[:24]
+    assert header[:8] == b"\x89PNG\r\n\x1a\n", f"{path.name} is not a PNG"
+    return int.from_bytes(header[16:20], "big"), int.from_bytes(header[20:24], "big")
+
+
+def test_brand_assets_exist_at_the_sizes_hacs_expects():
+    """Without them HACS falls back to the central brands repository and fails."""
+    brand = COMPONENT_ROOT / "brand"
+    for name, expected in (("icon.png", 256), ("icon@2x.png", 512), ("logo.png", 256), ("logo@2x.png", 512)):
+        asset = brand / name
+        assert asset.exists(), f"missing brand asset {name}"
+        assert _png_size(asset) == (expected, expected)
