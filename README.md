@@ -87,6 +87,7 @@ installation itself.
 | `sensor.neverdry_calibrator_calibrated_probes` | On the hub: how many probes are calibrated, with the status and progress of each in its attributes. |
 | `sensor.<probe>_calibrated_soil_moisture` | Volumetric water content in percent. Unknown until the calibration is earned. Attributes carry the available water share, the raw index, and whether the reading is an extrapolation. |
 | `sensor.<probe>_calibration_status` | `collecting`, `calibrated`, `drifting`, `probe_offline` or `invalidated`, with the full evidence in its attributes: which gates are missing, how many cycles are complete, why the last observations were refused. |
+| `sensor.<probe>_probe_placement` | `not_enough_evidence`, `plausible` or `suspect`: whether the collected cycles suggest the probe is in a place worth reading, with every suspicion and the numbers behind it in its attributes. Diagnostic only, it never withholds a calibration. |
 | `sensor.<probe>_calibration_progress` | Percentage towards the least satisfied gate. |
 | `sensor.<probe>_complete_cycles` | Cycles that counted as evidence, with the last ten described in the attributes. |
 | `sensor.<probe>_required_depletion` | How dry the soil must get between two irrigations for a cycle to count, in millimetres, with the other derived thresholds and the irrigation threshold of the zone in its attributes. |

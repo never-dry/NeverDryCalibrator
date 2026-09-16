@@ -18,6 +18,13 @@ from .calibration import (
 )
 from .cycles import CycleClosure, CyclePolicy, CycleTracker, DryDownCycle, TrackerState
 from .estimator import LineFit, TemperatureAwareFit, fit_with_temperature, theil_sen, two_point_line
+from .placement import (
+    PlacementConfidence,
+    PlacementPolicy,
+    PlacementSuspicion,
+    PlacementVerdict,
+    assess_placement,
+)
 from .samples import (
     Admission,
     AdmissionPolicy,
@@ -48,6 +55,10 @@ __all__ = [
     "InvalidationReason",
     "LineFit",
     "Observation",
+    "PlacementConfidence",
+    "PlacementPolicy",
+    "PlacementSuspicion",
+    "PlacementVerdict",
     "ProbeLiveness",
     "QualityGates",
     "RejectionReason",
@@ -57,6 +68,7 @@ __all__ = [
     "SoilTexture",
     "TemperatureAwareFit",
     "TrackerState",
+    "assess_placement",
     "deficit_to_mm",
     "depth_to_m",
     "fit_with_temperature",

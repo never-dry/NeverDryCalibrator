@@ -207,6 +207,14 @@
           "invalidated": "Annullata"
         }
       },
+      "probe_placement": {
+        "name": "Posizionamento sonda",
+        "state": {
+          "not_enough_evidence": "Prove insufficienti",
+          "plausible": "Plausibile",
+          "suspect": "Sospetto"
+        }
+      },
       "calibration_progress": {
         "name": "Avanzamento calibrazione"
       },
@@ -289,6 +297,26 @@
     "irrigation_threshold_too_low": {
       "title": "L'irrigazione e' troppo frequente per calibrare {probe}",
       "description": "La zona dietro {deficit_entity} irriga a {configured} mm di consumo, ma un ciclo di calibrazione deve coprirne almeno {required}, cioe' il trenta per cento dei {reservoir} mm che questo terreno trattiene.\n\nCon questo regime il terreno non si asciuga mai abbastanza fra due irrigazioni: nessun ciclo varra' come prova e {probe} restera' non calibrata a tempo indefinito.\n\nAlza la soglia di irrigazione di quella zona ad almeno {required} mm, che e' anche pratica ordinaria per le piante che bagna, oppure abbassa l'escursione richiesta nelle opzioni dell'integrazione accettando una calibrazione piu' debole."
+    },
+    "placement_no_response": {
+      "title": "{probe} non sta leggendo l'acqua che dovrebbe leggere",
+      "description": "Nel corso di {cycles_considered} cicli di irrigazione il terreno e' passato dalla capacita' di campo a quasi secco, e nel frattempo l'indice pubblicato da {moisture_entity} si e' spostato di {median_raw_span} punti.\n\nUna sonda dentro il terreno bagnato non puo' restare ferma mentre il serbatoio si svuota. Da controllare in quest'ordine: la sonda sta fuori dal volume che l'irrigazione bagna davvero, sta sopra o sotto la zona radicale che il deficit descrive, oppure e' in una sacca di ghiaia o in un vuoto dove non c'e' acqua del terreno da misurare.\n\nSpostala piu' vicino a un gocciolatoio e alla profondita' che il deficit modella, spingila finche' tutta la lunghezza sensibile e' a contatto pieno col terreno, poi azzera la calibrazione di {probe}: i campioni raccolti finora descrivono la vecchia posizione."
+    },
+    "placement_poor_contact": {
+      "title": "{probe} salta mentre il terreno sta fermo",
+      "description": "Fra letture consecutive prese mentre il deficit non si muoveva, l'indice di {moisture_entity} cambia di {still_raw_step} punti.\n\nL'acqua del terreno non cambia cosi' in fretta. Un'intercapedine d'aria intorno al gambo si', e cosi' anche un contatto elettrico allentato o una sonda che si sta guastando: la lettura segue l'aria nella cavita' invece dell'acqua nel terreno.\n\nEstrai la sonda e reinseriscila in modo che tutta la lunghezza sensibile sia a contatto pieno, rincalzando e premendo il terreno intorno invece di lasciarla cadere in un foro largo. Se i salti restano dopo un reinserimento fatto bene, il sospetto passa alla sonda stessa."
+    },
+    "placement_unstable_between_cycles": {
+      "title": "{probe} non legge due volte lo stesso terreno",
+      "description": "Ogni ciclo preso da solo e' pulito, ma la relazione fra indice e acqua cambia da un ciclo all'altro: su {cycles_considered} cicli la dispersione e' {slope_spread} volte il valore tipico.\n\nLa sonda legge bene, e legge un punto che non e' rappresentativo. Di solito l'acqua la raggiunge in modo diverso ogni volta: un gocciolatoio che si intasa e si libera, una sonda sul bordo del bulbo bagnato dove basta poca portata in meno per lasciarla fuori, oppure ruscellamento che prende strade diverse in giorni diversi.\n\nControlla il gocciolatoio che serve {probe} e spostala bene dentro l'area bagnata invece che sul suo bordo. La calibrazione non e' tanto sbagliata quanto una media di situazioni diverse."
+    },
+    "placement_wet_anchor_drift": {
+      "title": "La capacita' di campo continua a leggersi diversa su {probe}",
+      "description": "Dopo ogni irrigazione e relativo drenaggio il terreno e' alla capacita' di campo per definizione, quindi {moisture_entity} dovrebbe riportare ogni volta all'incirca lo stesso indice. Invece si e' spostato di {wet_anchor_drift} punti in una sola direzione nell'arco di {cycles_considered} cicli.\n\nQuello che cambia e' la sonda e il terreno che la circonda, non l'acqua. Le cause abituali sono l'assestamento del terreno che si stacca dal gambo, le radici che crescono nel volume di misura, oppure gli elettrodi che si corrodono.\n\nEstrai la sonda, controlla gambo e contatto col terreno, reinseriscila con decisione e azzera la calibrazione di {probe}: i campioni raccolti prima del cambiamento descrivono uno strumento diverso."
+    },
+    "placement_coarse_response": {
+      "title": "{probe} distingue il terreno troppo grossolanamente",
+      "description": "Sull'intero serbatoio l'indice di {moisture_entity} copre circa {points_per_reservoir} punti, dove {points_per_reservoir_required} e' il minimo che questo metodo si aspetta.\n\nA quella risoluzione un punto di indice vale da solo piu' di un punto percentuale di acqua nel terreno, quindi la quantizzazione della sonda si mangia gran parte del budget di errore prima che la calibrazione aggiunga il proprio. Una calibrazione verra' comunque pubblicata se supera i suoi criteri, e sara' grossolana.\n\nUn inserimento piu' profondo o piu' saldo di solito allarga l'escursione. Se non succede, la sonda e' quella che e', e il suo valore calibrato va letto come indicatore grossolano piuttosto che come misura."
     }
   }
 }

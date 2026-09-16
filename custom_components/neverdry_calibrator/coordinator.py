@@ -40,6 +40,7 @@ from .const import (
     CONF_MOISTURE_ENTITY,
     CONF_PROBE_TEMPERATURE_ENTITY,
     DOMAIN,
+    ISSUE_PLACEMENT_PREFIX,
     ISSUE_THRESHOLD_TOO_LOW,
     REFIT_INTERVAL_MINUTES,
     STORAGE_SAVE_DELAY_S,
@@ -53,6 +54,8 @@ from .model import (
     CalibrationStatus,
     GateVerdict,
     Observation,
+    PlacementSuspicion,
+    PlacementVerdict,
     ProbeLiveness,
     RejectionReason,
     deficit_to_mm,
@@ -141,6 +144,7 @@ class CalibratorData:
     battery_percent: float | None
     thresholds: DerivedThresholds | None = None
     irrigation_threshold_mm: float | None = None
+    placement: PlacementVerdict | None = None
 
     @property
     def calibration_progress(self) -> float:
@@ -200,6 +204,7 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
         self._last_refit: datetime | None = session.last_fit_at
         self._complete_cycles_seen = 0
         self._verdict: GateVerdict | None = None
+        self._placement: PlacementVerdict | None = None
         self._calibration_snapshot: dict[str, str] = {}
         self._stored_snapshot: dict[str, str] = dict(stored_snapshot or {})
         self._threshold_entity: str | None = None
@@ -453,6 +458,63 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
             },
         )
 
+    def _placement_placeholders(self) -> dict[str, str]:
+        """Every number a placement repair might quote, formatted for a template.
+
+        One set for all five messages rather than one per message: each template
+        uses the two or three it needs, the unused ones cost nothing, and a
+        signature that did not run leaves a dash instead of breaking the string.
+        """
+        evidence = self._placement.evidence if self._placement else {}
+        keys = (
+            "cycles_considered",
+            "median_raw_span",
+            "points_per_reservoir",
+            "points_per_reservoir_required",
+            "slope_spread",
+            "wet_anchor_drift",
+            "still_raw_step",
+        )
+        placeholders = {key: f"{evidence[key]:g}" if key in evidence else "-" for key in keys}
+        placeholders["probe"] = self.probe.name
+        placeholders["moisture_entity"] = self.probe.moisture_entity
+        return placeholders
+
+    def _review_placement(self) -> None:
+        """Raise or clear the repair that says the probe may be in the wrong place.
+
+        Only the most severe suspicion becomes a repair, and the rest stay on the
+        placement entity. The reasoning is the same one that made the irrigation
+        repair worth writing: the advice has to arrive before weeks are spent,
+        and a user shown five warnings about one probe learns to close all five
+        without reading them.
+
+        This never touches the calibration. The thresholds behind these
+        signatures are argued and not yet measured against probes whose placement
+        is independently known, which is exactly the kind of number that may
+        advise a user and may not overrule one.
+        """
+        primary = self._placement.primary if self._placement else None
+        for suspicion in PlacementSuspicion:
+            if suspicion is primary:
+                continue
+            ir.async_delete_issue(self.hass, DOMAIN, self._placement_issue_id(suspicion))
+        if primary is None:
+            return
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            self._placement_issue_id(primary),
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key=f"{ISSUE_PLACEMENT_PREFIX}_{primary}",
+            translation_placeholders=self._placement_placeholders(),
+        )
+
+    def _placement_issue_id(self, suspicion: PlacementSuspicion) -> str:
+        """Issue id of one signature on one probe of one entry."""
+        return f"{ISSUE_PLACEMENT_PREFIX}_{suspicion}_{self.entry.entry_id}_{self.probe.probe_id}"
+
     def _should_refit(self, now: datetime, complete_cycles: int) -> bool:
         """Refit when a cycle completed, or when the periodic interval has elapsed.
 
@@ -484,6 +546,7 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
             self._last_refit = now
             self._complete_cycles_seen = complete_cycles
             self.session.update_drift()
+            self._placement = self.session.assess_placement()
             self._schedule_save()
 
         reading = None
@@ -500,6 +563,7 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
         thresholds = self.derived_thresholds()
         configured_threshold = self.configured_irrigation_threshold_mm()
         self._review_irrigation_regime(thresholds, configured_threshold)
+        self._review_placement()
 
         return CalibratorData(
             status=self.session.status,
@@ -522,6 +586,7 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
             battery_percent=self._battery_percent(),
             thresholds=thresholds,
             irrigation_threshold_mm=configured_threshold,
+            placement=self._placement,
         )
 
     # ── Service entry points ─────────────────────────────────────
@@ -543,6 +608,7 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
         self._last_irrigation_end = None
         self._complete_cycles_seen = 0
         self._verdict = None
+        self._placement = None
         await self.async_save_now()
         await self.async_request_refresh()
 

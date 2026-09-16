@@ -40,3 +40,35 @@ def test_every_select_translation_key_has_labels():
     for key in _select_translation_keys():
         assert key in selectors, f"selector.{key} is referenced but not translated"
         assert selectors[key].get("options"), f"selector.{key} has no option labels"
+
+
+def _translation_files() -> list[Path]:
+    """Every file a user could be shown a placement message from."""
+    return [COMPONENT_ROOT / "strings.json", *sorted((COMPONENT_ROOT / "translations").glob("*.json"))]
+
+
+def test_every_placement_suspicion_has_its_advice():
+    """A signature with no repair text is a diagnosis the user never receives.
+
+    The whole point of the placement diagnostic is that the advice arrives before
+    weeks of cycles are spent on a probe in the wrong place. A sixth signature
+    added to the domain and not to the strings would fail silently, showing a
+    repair with a raw translation key in place of what to do about it.
+    """
+    import sys
+
+    sys.path.insert(0, str(COMPONENT_ROOT))
+    from model import PlacementConfidence, PlacementSuspicion
+
+    for path in _translation_files():
+        data = json.loads(path.read_text(encoding="utf-8"))
+        issues = data.get("issues", {})
+        for suspicion in PlacementSuspicion:
+            key = f"placement_{suspicion}"
+            assert key in issues, f"{path.name}: issues.{key} is raised in code but not translated"
+            assert issues[key].get("title"), f"{path.name}: issues.{key} has no title"
+            assert issues[key].get("description"), f"{path.name}: issues.{key} has no description"
+
+        states = data["entity"]["sensor"]["probe_placement"]["state"]
+        for confidence in PlacementConfidence:
+            assert str(confidence) in states, f"{path.name}: probe_placement.{confidence} has no label"

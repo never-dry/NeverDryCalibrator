@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 import random
+from collections.abc import Callable
 from datetime import datetime, timedelta
 
 from model import CalibrationSession, Observation, SoilProfile, SoilTexture
@@ -47,12 +48,17 @@ def run_cycles(
     noise_sigma: float = 0.8,
     seed: int = 7,
     drainage_hours: int = 4,
+    index_fn: Callable[[SoilProfile, float, float, float], float] = probe_index,
 ) -> datetime:
     """Feed the session a number of irrigation-to-dry-down cycles, hour by hour.
 
     Returns the clock the run ended at, so a caller can continue the timeline.
     Note that ``cycles`` irrigations produce ``cycles - 1`` closed cycles: a cycle
     only completes when the next irrigation closes it.
+
+    ``index_fn`` replaces the well-behaved synthetic probe with a misbehaving one,
+    which is how the placement tests feed the same machinery a probe that never
+    moves, or one that jumps while the soil stands still.
     """
     generator = random.Random(seed)
     now = start or datetime(2026, 4, 1, 6, 0)
@@ -69,7 +75,7 @@ def run_cycles(
             session.observe(
                 Observation(
                     taken_at=now,
-                    raw_percent=probe_index(soil, deficit, temperature, generator.gauss(0.0, noise_sigma)),
+                    raw_percent=index_fn(soil, deficit, temperature, generator.gauss(0.0, noise_sigma)),
                     deficit_mm=deficit,
                     deficit_age_s=60.0,
                     probe_temperature_c=temperature,

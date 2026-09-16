@@ -187,7 +187,67 @@ three expire.
 * **Extrapolation.** Each published reading says whether it falls outside the
   index range the line was ever tested over.
 
-## 9. What remains wrong, and by how much
+## 9. Whether the probe is anywhere useful
+
+Everything above assumes the probe is somewhere worth reading. That assumption
+does a great deal of work, and it is the one most likely to be false: a probe
+pushed in thirty centimetres from an emitter instead of ten may sit outside the
+wetted soil entirely, and nothing about its readings looks broken. It publishes a
+number all day.
+
+The same cycles that feed the estimator can be read for this, and five signatures
+come out of them.
+
+* **The probe does not move.** The reservoir went from full to nearly empty and
+  the index travelled a point or two. A probe in wet soil cannot do that. It is
+  outside the volume the irrigation wets, above or below the root zone the
+  deficit describes, or in a void.
+* **The probe moves too little to be worth calibrating.** This one has a number
+  behind it rather than a judgement. Over the plant-available range a loam at
+  thirty centimetres spans about thirteen percentage points of water content, so
+  a probe covering `R` index points over that range makes one index point worth
+  `13/R` points of moisture. Below ten points the probe's own quantisation costs
+  more than a point of VWC, before any calibration error: a large part of the
+  budget in section 10, spent on rounding.
+* **The cycles disagree with each other.** Each cycle is clean on its own and
+  they do not line up. The probe is reading correctly and reading a spot that is
+  not representative, usually because the water arrives differently each time: an
+  emitter that clogs and clears, or a probe sitting on the edge of the wetted
+  bulb where a small change in flow moves the boundary past it.
+* **Field capacity keeps moving.** After drainage the soil is at field capacity
+  by definition, so that reading should repeat. When it slides one way cycle
+  after cycle, what changed is the probe and the soil against it: settling,
+  roots, corrosion.
+* **The index jumps while the soil stands still.** Between two readings taken
+  minutes apart at an unchanged deficit, soil water does not move. An air gap
+  around the shaft does, and so does a failing probe.
+
+Two things this cannot do, which matter more than the five it can.
+
+It cannot tell a badly placed probe from a wrong water balance. Both produce the
+same disagreement between the two series, and no amount of data separates them by
+magnitude alone. What separates them is shape: a water balance is smooth by
+construction, so a jump at constant deficit, a lag or a hysteresis loop can only
+have come from the probe. Every signature above is one of those, or a comparison
+of cycles against each other rather than against the model. Two probes sharing
+one deficit source would settle it outright, since a disagreement common to both
+is the model's and one peculiar to either is that probe's. That comparison is not
+built yet.
+
+And it cannot give you a probability. Five cycles are five observations. That is
+enough to say "this number is out of range, here it is", and not enough to say
+"there is a seventy-three percent chance your probe is misplaced". A calibrated
+probability would need a set of probes whose placement was independently known,
+which does not exist. So the integration names the suspicion, shows the number
+that raised it, and leaves the judgement where the evidence actually is, with the
+person who can go and look.
+
+For the same reason none of this blocks a calibration. Four of the five
+thresholds are argued rather than measured. An unmeasured threshold is allowed to
+advise you and not to overrule you: the gates in section 7 decide what gets
+published, these five only describe what they noticed.
+
+## 10. What remains wrong, and by how much
 
 Stated plainly, because a calibration that hides its error budget is worse than
 none:
@@ -210,7 +270,7 @@ Expect, on a well-installed probe in reasonably uniform soil, agreement of a few
 percentage points of volumetric water content, which is enough to schedule
 irrigation and not enough to publish a soil physics paper.
 
-## 10. Checking it yourself
+## 11. Checking it yourself
 
 The cheapest independent check is gravimetric. Take a core of known volume near
 the probe, weigh it, dry it at 105 degrees to constant mass, weigh again: the
@@ -220,7 +280,7 @@ comparison worth making is between the published regression and the anchor-only
 estimate that appears in the attributes: they are built from different
 assumptions, and a large disagreement is a real signal.
 
-## 11. References
+## 12. References
 
 * Topp, G. C., Davis, J. L., Annan, A. P. (1980). Electromagnetic determination
   of soil water content. *Water Resources Research* 16(3).

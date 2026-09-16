@@ -21,6 +21,7 @@ from enum import StrEnum
 
 from .cycles import CycleClosure, CyclePolicy, CycleTracker
 from .estimator import LineFit, TemperatureAwareFit, fit_with_temperature, residual_rmse, two_point_line
+from .placement import PlacementPolicy, PlacementVerdict, assess_placement
 from .samples import (
     Admission,
     AdmissionPolicy,
@@ -241,6 +242,7 @@ class CalibrationSession:
     admission_policy: AdmissionPolicy = field(default_factory=AdmissionPolicy)
     cycle_policy: CyclePolicy = field(default_factory=CyclePolicy)
     gates: QualityGates = field(default_factory=QualityGates)
+    placement_policy: PlacementPolicy = field(default_factory=PlacementPolicy)
     buffer: SampleBuffer = field(default_factory=SampleBuffer)
     tracker: CycleTracker | None = None
     fit: CalibrationFit | None = None
@@ -517,6 +519,20 @@ class CalibrationSession:
             self.status = CalibrationStatus.CALIBRATED
         return self.drift_rmse
 
+    def assess_placement(self) -> PlacementVerdict:
+        """Read the evidence for signs that the probe is in the wrong place.
+
+        Kept beside the gates rather than inside them on purpose. The gates
+        decide whether a number may be published and are allowed to refuse; this
+        only ever describes, because its thresholds are argued and not yet
+        measured against probes whose placement is independently known. A
+        suspicion here never changes ``status`` and never withholds a reading.
+        """
+        assert self.tracker is not None
+        cycles = self.tracker.complete_cycles()
+        samples = self.buffer.for_cycles({cycle.index for cycle in cycles})
+        return assess_placement(cycles, samples, self.soil, self.placement_policy)
+
     # ── Reading ──────────────────────────────────────────────────
 
     def calibrated_reading(
@@ -649,6 +665,7 @@ class CalibrationSession:
             "admission_policy": self.admission_policy.to_dict(),
             "cycle_policy": self.cycle_policy.to_dict(),
             "gates": self.gates.to_dict(),
+            "placement_policy": self.placement_policy.to_dict(),
             "samples": self.buffer.to_list(),
             "tracker": self.tracker.to_dict(),
             "fit": self.fit.to_dict() if self.fit else None,
@@ -673,6 +690,7 @@ class CalibrationSession:
         admission_policy = AdmissionPolicy.from_dict(data.get("admission_policy", {}))
         cycle_policy = CyclePolicy.from_dict(data.get("cycle_policy", {}))
         gates = QualityGates.from_dict(data.get("gates", {}))
+        placement_policy = PlacementPolicy.from_dict(data.get("placement_policy", {}))
         buffer = SampleBuffer.from_list(data.get("samples", []))
         tracker = CycleTracker.from_dict(data.get("tracker", {}), cycle_policy, soil.total_available_water_mm)
 
@@ -691,6 +709,7 @@ class CalibrationSession:
             admission_policy=admission_policy,
             cycle_policy=cycle_policy,
             gates=gates,
+            placement_policy=placement_policy,
             buffer=buffer,
             tracker=tracker,
             fit=fit,
@@ -730,6 +749,8 @@ __all__ = [
     "GateVerdict",
     "InvalidationReason",
     "LineFit",
+    "PlacementPolicy",
+    "PlacementVerdict",
     "QualityGates",
     "line_summary",
 ]

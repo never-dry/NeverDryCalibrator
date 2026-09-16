@@ -4,6 +4,23 @@ All notable changes to this integration are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- A placement diagnostic. The collected cycles are read for five signs that the
+  probe is in the wrong place: no response while the reservoir empties, a range
+  too coarse to meet the error budget, cycles that disagree with each other, a
+  wet anchor that drifts, and an index that jumps while the soil stands still.
+  Published on a new `probe_placement` entity per probe, which carries every
+  suspicion with the number behind it, and summarised per probe on the hub.
+- A repair for the most severe placement suspicion, one per probe, naming what
+  to check and what to do about it, clearing itself when the signature clears.
+- The placement diagnostic never blocks a calibration: it sets no status, gates
+  nothing and withholds no reading. Four of its five thresholds are argued
+  rather than measured, and an unmeasured threshold may advise a user, not
+  overrule one. The fifth follows from the error budget.
+
 ## 0.1.0 - 2026-09-16
 
 First release. The calibration is complete and covered by tests; **validation on

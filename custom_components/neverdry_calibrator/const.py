@@ -110,3 +110,8 @@ THRESHOLD_KEYWORDS: tuple[str, ...] = ("threshold", "soglia", "trigger")
 
 #: Repair issue raised when the irrigation regime cannot produce a countable cycle.
 ISSUE_THRESHOLD_TOO_LOW = "irrigation_threshold_too_low"
+
+#: Prefix of the repair raised when the collected cycles suggest the probe is in
+#: the wrong place. The suspicion name is appended, so every signature gets its
+#: own translated advice instead of one message that has to fit all five.
+ISSUE_PLACEMENT_PREFIX = "placement"
