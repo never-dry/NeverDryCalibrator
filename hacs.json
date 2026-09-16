@@ -2,5 +2,7 @@
   "name": "NeverDry Calibrator",
   "content_in_root": false,
   "render_readme": true,
-  "homeassistant": "2024.10.0"
+  "homeassistant": "2024.10.0",
+  "zip_release": true,
+  "filename": "neverdry_calibrator.zip"
 }

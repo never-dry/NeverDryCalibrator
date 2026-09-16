@@ -1,5 +1,10 @@
 # NeverDry Calibrator
 
+[![Release](https://img.shields.io/github/v/release/never-dry/NeverDryCalibrator?sort=semver)](https://github.com/never-dry/NeverDryCalibrator/releases)
+[![Downloads](https://img.shields.io/github/downloads/never-dry/NeverDryCalibrator/total?label=archive%20downloads)](https://github.com/never-dry/NeverDryCalibrator/releases)
+[![Tests](https://github.com/never-dry/NeverDryCalibrator/actions/workflows/tests.yml/badge.svg)](https://github.com/never-dry/NeverDryCalibrator/actions/workflows/tests.yml)
+[![HACS](https://img.shields.io/badge/HACS-custom%20repository-41BDF5)](https://hacs.xyz/docs/faq/custom_repositories/)
+
 Turn a cheap capacitive soil probe into a soil moisture sensor you can actually
 use, by calibrating it in place against a water deficit computed by a scientific
 model.
@@ -14,10 +19,10 @@ irrigation-to-dry-down cycles, and learns the map between the two.
 Until it has enough evidence, it publishes nothing. That is the point.
 
 > **Status: field validation in progress.** The calibration domain is covered by
-> 149 tests and reproduces synthetic probes to within a fraction of a percent of
+> 152 tests and reproduces synthetic probes to within a fraction of a percent of
 > water content, but no result yet comes from a real probe in real soil. The
-> error budget in the method document is argued, not measured. There is no
-> release tag for that reason.
+> error budget in the method document is argued, not measured, and version 0.1.0
+> should be read as field-testable rather than proven.
 
 ## What you need
 
@@ -37,10 +42,17 @@ exposes.
 
 ## Installation
 
-HACS, as a custom repository of category *Integration*, then
-**Settings, Devices and services, Add integration, NeverDry Calibrator**. Or copy
-`custom_components/neverdry_calibrator` into your `config/custom_components/` and
-restart.
+In HACS, three dot menu, **Custom repositories**, paste
+`https://github.com/never-dry/NeverDryCalibrator` with category *Integration*,
+then download it from the card that appears and restart Home Assistant. HACS
+fetches the `neverdry_calibrator.zip` attached to the latest release, which is
+also what the download badge above counts.
+
+Manual installation works too: copy `custom_components/neverdry_calibrator` into
+your `config/custom_components/` and restart. You then update it by hand.
+
+After the restart, add it from **Settings, Devices and services, Add
+integration, NeverDry Calibrator**.
 
 ## One integration, all your probes
 
@@ -324,6 +336,22 @@ pytest -q
 The calibration domain in `custom_components/neverdry_calibrator/model/` imports
 nothing from Home Assistant and is tested without it. A CI job installs pytest
 alone to keep that true.
+
+Releases are cut by pushing a `v*` tag: the workflow refuses a red build, checks
+that the manifest version matches the tag, packages the integration directory
+into `neverdry_calibrator.zip` and publishes it with the changelog section as
+release notes.
+
+```bash
+python3 scripts/download_counts.py          # per release, with the totals
+python3 scripts/download_counts.py --json   # the same, machine readable
+```
+
+GitHub counts downloads of release **assets** only, never of the source archives
+it generates for a tag, which is why the workflow attaches an explicit zip. Read
+the numbers for what they are: HACS fetches that archive again at every update,
+so the total measures activity rather than people, and none of these figures is
+an install count.
 
 ## License
 

@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install test requirements
+        run: pip install -r requirements_test.txt
+
+      - name: Refuse to release a red build
+        run: |
+          ruff check .
+          ruff format --check .
+          pytest -q
+
+      - name: Extract the version from the tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the manifest version matches the tag
+        run: |
+          MANIFEST=$(python -c "import json; print(json.load(open('custom_components/neverdry_calibrator/manifest.json'))['version'])")
+          TAG="${{ steps.version.outputs.version }}"
+          if [ "$MANIFEST" != "$TAG" ]; then
+            echo "manifest.json says $MANIFEST, the tag says $TAG" >&2
+            exit 1
+          fi
+
+      - name: Package the integration
+        run: |
+          # The archive holds the CONTENTS of the integration directory, not the
+          # directory itself: HACS extracts the zip INTO
+          # custom_components/neverdry_calibrator/, so a top level folder inside
+          # the archive would nest it twice and the integration would not load.
+          # __pycache__ is excluded so no bytecode ever ships.
+          cd custom_components/neverdry_calibrator
+          zip -r ../../neverdry_calibrator.zip . -x '*__pycache__*'
+
+      - name: Take the release notes from the changelog
+        id: notes
+        run: |
+          # The section of CHANGELOG.md for this version, in the words a user
+          # needs. Letting GitHub generate the notes instead publishes the list
+          # of merged pull requests, which is internal churn.
+          python - <<'PY' > release_notes.md
+          import pathlib, re
+          version = "${{ steps.version.outputs.version }}"
+          text = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8")
+          match = re.search(rf"^## {re.escape(version)}.*?$(.*?)(?=^## |\Z)", text, re.M | re.S)
+          print((match.group(1).strip() if match else f"Release {version}."))
+          PY
+          echo "notes written"
+
+      - name: Publish the release with the zip attached
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ steps.version.outputs.version }}" \
+            neverdry_calibrator.zip \
+            --title "v${{ steps.version.outputs.version }}" \
+            --notes-file release_notes.md
