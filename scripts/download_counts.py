@@ -30,11 +30,28 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import ssl
 import urllib.error
 import urllib.request
 
 DEFAULT_REPO = "never-dry/NeverDryCalibrator"
 API = "https://api.github.com/repos/{repo}/releases?per_page=100"
+
+
+def _ssl_context() -> ssl.SSLContext:
+    """A verifying context that also works on a Python without system roots.
+
+    A framework build of Python on macOS ships no certificate store of its own
+    until someone runs its Install Certificates script, and the failure looks
+    like a network problem rather than a missing root. Using certifi when it is
+    importable removes a support question that has nothing to do with this
+    project. Verification is never disabled.
+    """
+    try:
+        import certifi
+    except ImportError:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
 
 
 def fetch_releases(repo: str) -> list[dict]:
@@ -51,7 +68,7 @@ def fetch_releases(repo: str) -> list[dict]:
     token = os.environ.get("GITHUB_TOKEN")
     if token:
         request.add_header("Authorization", f"Bearer {token}")
-    with urllib.request.urlopen(request, timeout=20) as response:  # noqa: S310 - fixed https host
+    with urllib.request.urlopen(request, timeout=20, context=_ssl_context()) as response:  # noqa: S310
         payload = json.load(response)
     if not isinstance(payload, list):
         raise RuntimeError(f"unexpected answer from the releases API: {payload}")
@@ -78,6 +95,8 @@ def main() -> int:
         rows = counts(fetch_releases(arguments.repo))
     except (urllib.error.URLError, RuntimeError) as error:
         print(f"could not read the releases of {arguments.repo}: {error}")
+        if isinstance(error, urllib.error.URLError) and "CERTIFICATE_VERIFY_FAILED" in str(error.reason):
+            print("this Python has no certificate store: pip install certifi, or run its Install Certificates script")
         return 1
 
     if not rows:
