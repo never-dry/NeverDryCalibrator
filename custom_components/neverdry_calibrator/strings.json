@@ -23,7 +23,7 @@
       },
       "soil": {
         "title": "Soil reservoir",
-        "description": "The deficit counts missing millimetres; the probe answers about water content. These values are the reservoir that converts one into the other. If the deficit comes from NeverDry, use the same soil you configured there.",
+        "description": "The deficit counts missing millimetres; the probe answers about water content. These values are the reservoir that converts one into the other. If the deficit comes from NeverDry, use the same soil you configured there. Not sure which one it is? The two minute ribbon test is described in the documentation: https://github.com/never-dry/NeverDryCalibrator#which-soil-should-i-pick",
         "data": {
           "soil_texture": "Soil texture",
           "root_depth": "Root zone depth",
@@ -91,7 +91,7 @@
       },
       "add_probe_soil": {
         "title": "Soil reservoir",
-        "description": "The reservoir this probe sits in. If the deficit comes from NeverDry, use the same soil you configured there for that zone.",
+        "description": "The reservoir this probe sits in. If the deficit comes from NeverDry, use the same soil you configured there for that zone. Not sure which one it is? The two minute ribbon test is described in the documentation: https://github.com/never-dry/NeverDryCalibrator#which-soil-should-i-pick",
         "data": {
           "soil_texture": "Soil texture",
           "root_depth": "Root zone depth",
@@ -121,7 +121,7 @@
       },
       "edit_probe_soil": {
         "title": "Soil of {probe}",
-        "description": "Correcting the soil re-derives the collected history against the new reservoir and drops the current calibration, which then has to be earned again on the same data. The samples themselves are measurements and survive.",
+        "description": "Correcting the soil re-derives the collected history against the new reservoir and drops the current calibration, which then has to be earned again on the same data. The samples themselves are measurements and survive. Not sure which one it is? The two minute ribbon test is described in the documentation: https://github.com/never-dry/NeverDryCalibrator#which-soil-should-i-pick",
         "data": {
           "soil_texture": "Soil texture",
           "root_depth": "Root zone depth",

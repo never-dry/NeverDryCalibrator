@@ -239,3 +239,10 @@ assumptions, and a large disagreement is a real signal.
 * Rosenbaum, U. et al. (2011). Correction of temperature and electrical
   conductivity effects on dielectric permittivity measurements with ECH2O
   sensors. *Vadose Zone Journal* 10(2).
+* Thien, S. J. (1979). A flow diagram for teaching texture-by-feel analysis.
+  *Journal of Agronomic Education* 8. The field method the README gives for
+  choosing the reservoir without a laboratory.
+* Saxton, K. E., Rawls, W. J. (2006). Soil water characteristic estimates by
+  texture and organic matter for hydrologic solutions. *Soil Science Society of
+  America Journal* 70(5). Where field capacity and wilting point per texture
+  come from.

@@ -13,6 +13,12 @@ irrigation-to-dry-down cycles, and learns the map between the two.
 
 Until it has enough evidence, it publishes nothing. That is the point.
 
+> **Status: field validation in progress.** The calibration domain is covered by
+> 149 tests and reproduces synthetic probes to within a fraction of a percent of
+> water content, but no result yet comes from a real probe in real soil. The
+> error budget in the method document is argued, not measured. There is no
+> release tag for that reason.
+
 ## What you need
 
 | Ingredient | Why |
@@ -102,6 +108,173 @@ Long version, with the physics, the failure modes and the reasoning behind every
 threshold: [`docs/design/calibration-method.md`](docs/design/calibration-method.md).
 The objects that implement it are described in
 [`docs/design/domain-model.md`](docs/design/domain-model.md).
+
+## Where to put the probe
+
+Two things decide whether a cheap probe is worth calibrating at all, and neither
+is the probe. The first is where it sits. The calibration needs the probe to
+travel its range every cycle: to reach field capacity after irrigation, and to
+dry appreciably before the next one. A probe that never does both cannot be
+calibrated by any method, and this integration will say so rather than pretend.
+
+### Distance from the emitter
+
+Under drip irrigation the water forms a **wetted bulb**: it sinks and spreads,
+the finer the soil the wider. Put the probe at roughly **half the wetted
+radius**, never directly under the emitter.
+
+| Soil | Typical bulb radius | Distance from the emitter |
+|---|---|---|
+| Sandy, drains fast | 10 to 15 cm | 8 to 12 cm |
+| Loam | 20 to 30 cm | 12 to 20 cm |
+| Clay, holds water | 30 to 45 cm | 20 to 30 cm |
+
+The two extremes fail in opposite and equally useless ways, and both are visible
+in the data this integration collects:
+
+* **Directly under the emitter** the probe sits in saturated water in transit. It
+  reads at the top of its scale during and after every irrigation and barely
+  falls, so the cycle has no span and the `raw_span` gate never passes.
+* **Outside the bulb** the probe never wets. It reads low and flat, irrigation
+  does not reach it, and it never produces a wet anchor.
+
+### Depth
+
+Bury the sensing blade completely, with the sensitive part centred around **a
+third to a half of the root depth** you configured. For turf or a shrub rooting
+at 30 cm, that is 10 to 15 cm down.
+
+### Finding the radius on your own soil
+
+Tables are a starting point; the bulb also depends on flow rate and run time. Run
+one normal irrigation, wait two or three hours for the front to redistribute,
+then dig a small exploratory hole radially outward from the emitter, twenty or
+thirty centimetres away from where the probe will go. The wet front is a clear
+colour change. Place the probe at half that radius, in undisturbed soil, and fill
+the exploratory hole back in.
+
+## How to insert it
+
+The second thing that decides everything, and the one most often got wrong.
+
+**Push it straight into undisturbed soil, in one movement, without rocking it.**
+Rocking opens a funnel around the blade, and that funnel collects water at every
+irrigation: the probe then spikes and falls back, measuring the event instead of
+the soil.
+
+If the ground is too hard, there are two honest ways in:
+
+1. **Wet and wait.** One irrigation, an hour, and the blade goes in by itself.
+   This is the better one.
+2. **Cut a pilot slit of the same width** with a thin knife, as deep as the blade
+   and no deeper, insert the probe and **press the soil at the sides**. You are
+   closing a slit against the blade, not filling a hole.
+
+**Do not dig a hole and backfill it.** For a blade pushed in from the surface it
+is the worst option available, for two reasons. Replaced soil has a different
+bulk density from the soil around it, and the relation between permittivity and
+water content depends on that density, so the probe would be calibrated against
+the backfill rather than against the bed. And the backfill becomes a preferential
+path: water runs down the disturbed column instead of redistributing, so the
+probe sees the irrigation arrive all at once and disappear, which is again the
+event and not the store.
+
+Air is the enemy: a film along the electrode costs more than twenty centimetres
+of position. Never hammer the probe in, and if you hit a stone move a few
+centimetres rather than forcing it, because forcing bends the blade and opens a
+void exactly where it measures. Avoid the lowest point of the bed, where water
+stands.
+
+**Then leave it there.** Every removal and reinsertion is a new probe in new
+soil, and the collected history has to be thrown away with
+`neverdry_calibrator.reset_calibration`. Half an hour spent choosing the spot is
+worth more than three moves in a month.
+
+## Which soil should I pick?
+
+The texture you choose sets the reservoir: field capacity, wilting point, and
+therefore how many millimetres of deficit correspond to one point of water
+content. You do not need a laboratory, you need two minutes and your hands.
+
+### The ribbon test
+
+Take a lump the size of a walnut **at the depth the probe sits**, ten to fifteen
+centimetres, not from the surface. Remove stones and roots, wet it a little at a
+time and knead it to the consistency of modelling clay: moist and mouldable, not
+muddy.
+
+1. **Roll a ball.** If it will not hold together, the soil is sandy and you are
+   done.
+2. **Squeeze the paste between thumb and forefinger**, pushing it upward into a
+   ribbon that overhangs the finger. Let it extend under its own weight until it
+   breaks, and measure how long it got.
+
+| Ribbon before it breaks | Texture | What to select |
+|---|---|---|
+| None, it crumbles | Sand | `Sandy` |
+| Under 2.5 cm, weak | Sandy loam | `Sandy` or `Automatic` |
+| 2.5 to 5 cm | Loam | `Automatic` |
+| Over 5 cm, strong and flexible | Clay | `Clay` |
+
+3. **Check by feel**, rubbing the wet paste between your fingers: **gritty and
+   scratchy** means sand, **smooth like flour or talc** means silt, **sticky,
+   clinging to your fingers** means clay. A true clay makes a long ribbon *and*
+   sticks.
+
+### The jar test, if you want a number
+
+Fill a glass jar one third with soil, add water almost to the top and a drop of
+dish soap, shake for a minute and leave it still. Sand settles in about **one
+minute**, silt in about **two hours**, clay takes **one to two days**. Measure
+the three layers with a ruler: more than 40% clay is a clay soil, around 20% with
+sand and silt in balance is a loam.
+
+### Signs you have already seen
+
+Water standing in puddles long after a storm, cracks opening in summer, heavy
+clods sticking to your boots and spade: clay. Water vanishing in minutes, a spade
+going in easily even when dry: not clay.
+
+### Two warnings
+
+Beds get amended over the years. If a hydrangea was planted with peat and acidic
+compost, the soil around its roots can be far lighter than the native clay of the
+same garden, and the probe reads that. Different beds can genuinely differ, so
+test each one rather than deciding once for the whole garden.
+
+### When in doubt, pick `Automatic` in both integrations
+
+Getting the texture wrong is a small error. Declaring **two different soils**,
+one in the water balance and another here, is the error this project is built to
+make impossible: the deficit would be computed against one reservoir and read
+against another. With the same choice on both sides the system stays
+self-consistent, and the residual error shifts the absolute scale without
+spoiling irrigation decisions, which follow the deficit anyway.
+
+Correcting it later costs nothing: changing the soil re-derives the samples
+already collected against the new reservoir and only the fit has to be earned
+again, on the same data. That is the one case where `reset_calibration` is *not*
+needed.
+
+### Sources
+
+* Thien, S. J. (1979). A flow diagram for teaching texture-by-feel analysis.
+  *Journal of Agronomic Education* 8, 54-55. The ribbon flowchart above, and the
+  method the USDA distributes as *Guide to Texture by Feel*.
+* Soil Science Division Staff (2017). *Soil Survey Manual*, USDA Handbook 18.
+  Texture classes and field description.
+* Kettler, T. A., Doran, J. W., Gilbert, T. L. (2001). Simplified method for soil
+  particle-size determination to accompany soil-quality analyses. *Soil Science
+  Society of America Journal* 65(3), 849-852. The sedimentation test.
+* Schwankl, L., Hanson, B., Prichard, T. (2008). *Maintaining Microirrigation
+  Systems*, University of California ANR Publication 21637, and FAO (2002),
+  *Localized irrigation systems*: wetted bulb geometry under drip, and why the
+  sensing point belongs inside it but away from the emitter.
+* Saxton, K. E., Rawls, W. J. (2006). Soil water characteristic estimates by
+  texture and organic matter for hydrologic solutions. *Soil Science Society of
+  America Journal* 70(5), 1569-1578. Where water-holding values per texture come
+  from; the presets in this integration mirror the soil table of NeverDry, so
+  that both describe the same reservoir.
 
 ## Will your irrigation regime ever calibrate?
 
