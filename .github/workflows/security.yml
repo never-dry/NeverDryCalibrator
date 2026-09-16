@@ -1,0 +1,36 @@
+name: Security
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  bandit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install bandit
+        run: pip install bandit
+      - name: Static analysis
+        run: bandit -r custom_components/neverdry_calibrator -ll
+
+  forbidden-patterns:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No secrets, no agent state, no dangerous calls
+        run: |
+          set -e
+          if git ls-files | grep -E '(^|/)(\.env|\.env\..*|\.coding_agent/)' ; then
+            echo "forbidden file tracked" && exit 1
+          fi
+          if grep -rnE '\b(eval|exec)\(' custom_components/ ; then
+            echo "dynamic execution is not allowed in this integration" && exit 1
+          fi
+          if grep -rniE '(api[_-]?key|token|password)\s*=\s*["'"'"'][^"'"'"']{8,}' custom_components/ ; then
+            echo "hardcoded credential candidate" && exit 1
+          fi

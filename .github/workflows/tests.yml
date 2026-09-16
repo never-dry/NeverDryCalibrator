@@ -1,0 +1,41 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install test requirements
+        run: pip install -r requirements_test.txt
+      - name: Ruff check
+        run: ruff check .
+      - name: Ruff format check
+        run: ruff format --check .
+      - name: Pytest
+        run: pytest -q
+
+  domain-without-home-assistant:
+    # The calibration domain must stay runnable with nothing but the standard
+    # library. This job is the proof, not a convention: it installs pytest only.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install pytest only
+        run: pip install pytest
+      - name: Run the domain tests
+        run: >-
+          pytest -q tests/test_units.py tests/test_soil.py tests/test_samples.py
+          tests/test_cycles.py tests/test_estimator.py tests/test_calibration.py
+          tests/test_architecture.py tests/test_manifest.py
+          tests/test_translation_consistency.py

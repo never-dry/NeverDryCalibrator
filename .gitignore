@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.venv/
+.venv-ha/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.DS_Store
+.coding_agent/
+.env
+.env.*
+
+# .code_reader/: cartella di scambio col tool di lettura, locale alla macchina
+.code_reader/

@@ -1,0 +1,294 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Prima sonda",
+        "description": "Associa una sonda del terreno economica a un deficit idrico calcolato da un modello scientifico. La sonda viene letta come indice da 0 a 100; il deficit e' il riferimento rispetto al quale viene calibrata. Puoi aggiungere altre sonde adesso, e in qualunque momento dalle opzioni dell'integrazione.",
+        "data": {
+          "name": "Nome della sonda",
+          "moisture_entity": "Sonda del terreno (indice 0-100)",
+          "deficit_entity": "Sensore di deficit idrico",
+          "ambient_temperature_entity": "Temperatura ambiente (opzionale)",
+          "irrigation_entity": "Valvola o interruttore di irrigazione (opzionale)",
+          "probe_temperature_entity": "Temperatura della sonda (opzionale, viene scoperta da sola)"
+        },
+        "data_description": {
+          "name": "Come comparira' questa sonda: da' il nome al suo dispositivo e alle sue entita'.",
+          "moisture_entity": "Il sensore grezzo della sonda economica, esattamente come viene pubblicato oggi.",
+          "deficit_entity": "Un deficit idrico del terreno in millimetri o pollici, prodotto da un modello di bilancio idrico.",
+          "ambient_temperature_entity": "Serve a rifiutare i campioni con terreno gelato e come ripiego quando la sonda non pubblica una propria temperatura.",
+          "irrigation_entity": "Migliora la tempistica della finestra di drenaggio. Senza, l'irrigazione viene dedotta dal crollo del deficit.",
+          "probe_temperature_entity": "Lascia vuoto a meno che la scoperta automatica non scelga quella sbagliata. La temperatura della sonda e' la sentinella che si accorge della batteria scarica."
+        }
+      },
+      "soil": {
+        "title": "Serbatoio del terreno",
+        "description": "Il deficit conta i millimetri mancanti; la sonda risponde sul contenuto d'acqua. Questi valori sono il serbatoio che converte l'uno nell'altro. Se il deficit arriva da NeverDry, usa lo stesso terreno configurato li'.",
+        "data": {
+          "soil_texture": "Tessitura del terreno",
+          "root_depth": "Profondita' radicale",
+          "root_depth_unit": "Unita' di profondita'",
+          "field_capacity": "Capacita' di campo (solo custom)",
+          "wilting_point": "Punto di appassimento (solo custom)",
+          "saturation": "Saturazione (solo custom)"
+        },
+        "data_description": {
+          "root_depth": "Quanto in profondita' arrivano le radici che contano. Stabilisce quanti millimetri di deficit corrispondono a un punto di contenuto d'acqua.",
+          "field_capacity": "Contenuto d'acqua che il terreno trattiene dopo il drenaggio, in metri cubi per metro cubo.",
+          "wilting_point": "Contenuto d'acqua sotto il quale la pianta non riesce piu' a estrarre acqua.",
+          "saturation": "Porosita'. Lascia vuoto per assumere un margine sopra la capacita' di campo."
+        }
+      },
+      "confirm": {
+        "title": "Entita' trovate sulla sonda",
+        "description": "Queste entita' sono state trovate sullo stesso dispositivo e verranno usate automaticamente.\n\nTemperatura (sentinella di vitalita'): {probe_temperature}\nBatteria: {battery}\nCalibrazione temperatura: {temperature_calibration}\nCalibrazione umidita': {humidity_calibration}\nCalibrazione terreno: {soil_calibration}\n\nLe entita' di calibrazione vengono lette, mai scritte, a meno che tu non abiliti la scrittura nelle opzioni."
+      },
+      "add_another": {
+        "title": "Un'altra sonda?",
+        "description": "Configurate finora: {count} ({names}).\n\nSpunta la casella per aggiungerne un'altra adesso. Puoi comunque aggiungerle in seguito dalle opzioni dell'integrazione.",
+        "data": {
+          "add_another": "Aggiungi un'altra sonda"
+        }
+      }
+    },
+    "error": {
+      "moisture_not_numeric": "Questa entita' non pubblica un numero.",
+      "moisture_out_of_range": "La sonda deve pubblicare un indice tra 0 e 100.",
+      "deficit_not_numeric": "Questa entita' non pubblica un numero.",
+      "deficit_unit_unknown": "L'unita' del deficit non e' un'altezza d'acqua convertibile. Usa mm, cm, m o pollici.",
+      "same_entity": "La sonda e il deficit non possono essere la stessa entita'.",
+      "probe_already_exists": "Esiste gia' una sonda con questo nome.",
+      "probe_already_configured": "Questo sensore e' gia' calibrato da un'altra sonda di questa installazione.",
+      "invalid_soil": "Questi valori non descrivono un terreno reale: il punto di appassimento deve stare sotto la capacita' di campo, e la capacita' di campo non puo' superare la saturazione."
+    },
+    "abort": {
+      "single_instance_allowed": "NeverDry Calibrator e' gia' configurato. Aggiungi le sonde dalle sue opzioni, cosi' resta tutto in un posto solo."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "NeverDry Calibrator",
+        "menu_options": {
+          "add_probe": "Aggiungi una sonda",
+          "edit_probe": "Modifica una sonda",
+          "remove_probe": "Rimuovi una sonda",
+          "sampling": "Regole di campionamento",
+          "gates": "Soglie di qualita' e scrittura sul dispositivo"
+        }
+      },
+      "add_probe": {
+        "title": "Aggiungi una sonda",
+        "description": "Associa un'altra sonda economica a un deficit idrico. Avra' un dispositivo suo, entita' sue e una storia di calibrazione sua.",
+        "data": {
+          "name": "Nome della sonda",
+          "moisture_entity": "Sonda del terreno (indice 0-100)",
+          "deficit_entity": "Sensore di deficit idrico",
+          "ambient_temperature_entity": "Temperatura ambiente (opzionale)",
+          "irrigation_entity": "Valvola o interruttore di irrigazione (opzionale)",
+          "probe_temperature_entity": "Temperatura della sonda (opzionale, viene scoperta da sola)"
+        }
+      },
+      "add_probe_soil": {
+        "title": "Serbatoio del terreno",
+        "description": "Il serbatoio in cui sta questa sonda. Se il deficit arriva da NeverDry, usa lo stesso terreno configurato li' per quella zona.",
+        "data": {
+          "soil_texture": "Tessitura del terreno",
+          "root_depth": "Profondita' radicale",
+          "root_depth_unit": "Unita' di profondita'",
+          "field_capacity": "Capacita' di campo (solo custom)",
+          "wilting_point": "Punto di appassimento (solo custom)",
+          "saturation": "Saturazione (solo custom)"
+        }
+      },
+      "edit_probe": {
+        "title": "Modifica una sonda",
+        "data": {
+          "selected_probe": "Sonda"
+        }
+      },
+      "edit_probe_detail": {
+        "title": "Modifica {probe}",
+        "description": "Cambiare il sensore grezzo o la sorgente del deficit annulla la calibrazione: i campioni raccolti descrivono un altro strumento.",
+        "data": {
+          "name": "Nome della sonda",
+          "moisture_entity": "Sonda del terreno (indice 0-100)",
+          "deficit_entity": "Sensore di deficit idrico",
+          "ambient_temperature_entity": "Temperatura ambiente (opzionale)",
+          "irrigation_entity": "Valvola o interruttore di irrigazione (opzionale)",
+          "probe_temperature_entity": "Temperatura della sonda (opzionale, viene scoperta da sola)"
+        }
+      },
+      "edit_probe_soil": {
+        "title": "Terreno di {probe}",
+        "description": "Correggere il terreno ricalcola la storia raccolta rispetto al nuovo serbatoio e annulla la calibrazione corrente, che va poi riguadagnata sugli stessi dati. I campioni sono misure e restano.",
+        "data": {
+          "soil_texture": "Tessitura del terreno",
+          "root_depth": "Profondita' radicale",
+          "root_depth_unit": "Unita' di profondita'",
+          "field_capacity": "Capacita' di campo (solo custom)",
+          "wilting_point": "Punto di appassimento (solo custom)",
+          "saturation": "Saturazione (solo custom)"
+        }
+      },
+      "remove_probe": {
+        "title": "Rimuovi una sonda",
+        "data": {
+          "selected_probe": "Sonda"
+        }
+      },
+      "confirm_removal": {
+        "title": "Rimuovere {probe}?",
+        "description": "Questo cancella il dispositivo di {probe}, le sue entita' e tutti i cicli che ha raccolto. Quei cicli sono costati settimane di calendario e non si recuperano.",
+        "data": {
+          "confirm_removal": "Si', rimuovi questa sonda e la sua storia"
+        }
+      },
+      "sampling": {
+        "title": "Regole di campionamento",
+        "description": "Quali osservazioni possono diventare campioni, per tutte le sonde di questa installazione. I valori di default vanno bene per un'aiuola con ciclo di irrigazione giornaliero.",
+        "data": {
+          "min_sample_interval_s": "Intervallo minimo tra due campioni",
+          "drainage_minutes": "Finestra di drenaggio dopo l'irrigazione",
+          "probe_timeout_s": "Sonda considerata offline dopo",
+          "min_soil_temperature_c": "Rifiuta i campioni sotto questa temperatura del terreno"
+        },
+        "data_description": {
+          "drainage_minutes": "Tempo che serve al fronte di bagnatura per redistribuirsi. Le letture dentro questa finestra descrivono acqua in transito, non quella che la zona radicale trattiene.",
+          "probe_timeout_s": "Per quanto la temperatura della sonda puo' restare muta prima di considerare la sonda morta, tipicamente per batteria scarica.",
+          "min_soil_temperature_c": "L'acqua gelata non si comporta come l'acqua liquida in una lettura capacitiva."
+        }
+      },
+      "gates": {
+        "title": "Soglie di qualita' e scrittura sul dispositivo",
+        "description": "Quante prove deve avere una calibrazione prima di essere pubblicata, per tutte le sonde di questa installazione. Abbassarle significa pubblicare prima e fidarsi di meno.",
+        "data": {
+          "min_cycles": "Cicli di irrigazione completi minimi",
+          "min_samples": "Campioni minimi",
+          "min_raw_span": "Escursione minima della sonda",
+          "min_r_squared": "Qualita' minima del fit (R quadro)",
+          "allow_device_writeback": "Permetti la scrittura di un offset sulla sonda"
+        },
+        "data_description": {
+          "min_cycles": "Un ciclo e' un'irrigazione seguita da un'asciugatura misurabile. Il default e' cinque: un solo evento di bagnatura e' il modo piu' comune di ottenere una calibrazione sicura e sbagliata.",
+          "allow_device_writeback": "Disattivato di default. Se attivo, il servizio apply_device_offset puo' modificare la calibrazione di una sonda, e questo azzera tutti i campioni raccolti."
+        }
+      }
+    },
+    "error": {
+      "moisture_not_numeric": "Questa entita' non pubblica un numero.",
+      "moisture_out_of_range": "La sonda deve pubblicare un indice tra 0 e 100.",
+      "deficit_not_numeric": "Questa entita' non pubblica un numero.",
+      "deficit_unit_unknown": "L'unita' del deficit non e' un'altezza d'acqua convertibile. Usa mm, cm, m o pollici.",
+      "same_entity": "La sonda e il deficit non possono essere la stessa entita'.",
+      "probe_already_exists": "Esiste gia' una sonda con questo nome.",
+      "probe_already_configured": "Questo sensore e' gia' calibrato da un'altra sonda di questa installazione.",
+      "invalid_soil": "Questi valori non descrivono un terreno reale: il punto di appassimento deve stare sotto la capacita' di campo, e la capacita' di campo non puo' superare la saturazione."
+    },
+    "abort": {
+      "no_probes": "Non c'e' ancora nessuna sonda su cui lavorare. Aggiungine una prima."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "calibrated_probes": {
+        "name": "Sonde calibrate"
+      },
+      "calibrated_moisture": {
+        "name": "Umidita' del terreno calibrata"
+      },
+      "calibration_status": {
+        "name": "Stato calibrazione",
+        "state": {
+          "collecting": "Raccolta prove",
+          "calibrated": "Calibrata",
+          "drifting": "In deriva",
+          "probe_offline": "Sonda offline",
+          "invalidated": "Annullata"
+        }
+      },
+      "calibration_progress": {
+        "name": "Avanzamento calibrazione"
+      },
+      "complete_cycles": {
+        "name": "Cicli completi"
+      },
+      "calibration_drift": {
+        "name": "Deriva della calibrazione"
+      },
+      "required_depletion": {
+        "name": "Escursione minima richiesta"
+      }
+    },
+    "binary_sensor": {
+      "probe_online": {
+        "name": "Sonda online"
+      },
+      "calibration_problem": {
+        "name": "Problema di calibrazione"
+      }
+    }
+  },
+  "services": {
+    "calibrate_now": {
+      "name": "Calibra adesso",
+      "description": "Ricalcola subito la calibrazione sui cicli raccolti finora.",
+      "fields": {
+        "probe": {
+          "name": "Sonda",
+          "description": "Nome della sonda. Lascia vuoto per ricalcolare tutte le sonde."
+        }
+      }
+    },
+    "reset_calibration": {
+      "name": "Azzera calibrazione",
+      "description": "Butta via campioni, cicli e fit di una sonda e ricomincia la raccolta da zero.",
+      "fields": {
+        "probe": {
+          "name": "Sonda",
+          "description": "Nome della sonda da azzerare. Obbligatorio: questo servizio non agisce su tutte le sonde insieme."
+        }
+      }
+    },
+    "mark_field_capacity": {
+      "name": "Segna capacita' di campo",
+      "description": "Registra la lettura corrente di una sonda come ancora di capacita' di campo.",
+      "fields": {
+        "probe": {
+          "name": "Sonda",
+          "description": "Nome della sonda da ancorare."
+        }
+      }
+    },
+    "apply_device_offset": {
+      "name": "Applica offset alla sonda",
+      "description": "Scrive un offset di calibrazione nell'entita' di calibrazione della sonda.",
+      "fields": {
+        "probe": {
+          "name": "Sonda",
+          "description": "Nome della sonda su cui scrivere."
+        },
+        "offset": {
+          "name": "Offset",
+          "description": "Offset da scrivere. Lascia vuoto per usare il valore suggerito."
+        }
+      }
+    },
+    "export_samples": {
+      "name": "Esporta campioni",
+      "description": "Restituisce tutti i campioni, i cicli e i fit dietro le calibrazioni correnti.",
+      "fields": {
+        "probe": {
+          "name": "Sonda",
+          "description": "Nome della sonda. Lascia vuoto per esportare tutte le sonde."
+        }
+      }
+    }
+  },
+  "issues": {
+    "irrigation_threshold_too_low": {
+      "title": "L'irrigazione e' troppo frequente per calibrare {probe}",
+      "description": "La zona dietro {deficit_entity} irriga a {configured} mm di consumo, ma un ciclo di calibrazione deve coprirne almeno {required}, cioe' il trenta per cento dei {reservoir} mm che questo terreno trattiene.\n\nCon questo regime il terreno non si asciuga mai abbastanza fra due irrigazioni: nessun ciclo varra' come prova e {probe} restera' non calibrata a tempo indefinito.\n\nAlza la soglia di irrigazione di quella zona ad almeno {required} mm, che e' anche pratica ordinaria per le piante che bagna, oppure abbassa l'escursione richiesta nelle opzioni dell'integrazione accettando una calibrazione piu' debole."
+    }
+  }
+}

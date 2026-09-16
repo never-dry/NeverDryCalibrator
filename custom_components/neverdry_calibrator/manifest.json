@@ -1,0 +1,17 @@
+{
+  "domain": "neverdry_calibrator",
+  "name": "NeverDry Calibrator",
+  "version": "0.1.0",
+  "documentation": "https://github.com/never-dry/NeverDryCalibrator",
+  "issue_tracker": "https://github.com/never-dry/NeverDryCalibrator/issues",
+  "codeowners": [
+    "@drake69"
+  ],
+  "config_flow": true,
+  "single_config_entry": true,
+  "iot_class": "calculated",
+  "dependencies": [
+    "repairs"
+  ],
+  "requirements": []
+}

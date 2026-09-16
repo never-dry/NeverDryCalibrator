@@ -1,0 +1,294 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "First probe",
+        "description": "Pair a cheap soil probe with a water deficit computed by a scientific model. The probe is read as an index from 0 to 100; the deficit is the reference the probe will be calibrated against. You can add more probes now, and any time later from the integration options.",
+        "data": {
+          "name": "Probe name",
+          "moisture_entity": "Soil probe (0-100 index)",
+          "deficit_entity": "Water deficit sensor",
+          "ambient_temperature_entity": "Ambient temperature (optional)",
+          "irrigation_entity": "Irrigation valve or switch (optional)",
+          "probe_temperature_entity": "Probe temperature (optional, discovered by itself)"
+        },
+        "data_description": {
+          "name": "How this probe will appear: it names its device and its entities.",
+          "moisture_entity": "The raw sensor of the cheap probe, exactly as it is published today.",
+          "deficit_entity": "A soil water deficit in millimetres or inches, produced by a water balance model.",
+          "ambient_temperature_entity": "Used to refuse samples while the ground is frozen, and as a fallback when the probe reports no temperature of its own.",
+          "irrigation_entity": "Improves the timing of the drainage window. Without it, irrigation is inferred from the deficit collapsing.",
+          "probe_temperature_entity": "Leave empty unless discovery picks the wrong one. The probe temperature is the sentinel that notices a flat battery."
+        }
+      },
+      "soil": {
+        "title": "Soil reservoir",
+        "description": "The deficit counts missing millimetres; the probe answers about water content. These values are the reservoir that converts one into the other. If the deficit comes from NeverDry, use the same soil you configured there.",
+        "data": {
+          "soil_texture": "Soil texture",
+          "root_depth": "Root zone depth",
+          "root_depth_unit": "Depth unit",
+          "field_capacity": "Field capacity (custom only)",
+          "wilting_point": "Wilting point (custom only)",
+          "saturation": "Saturation (custom only)"
+        },
+        "data_description": {
+          "root_depth": "How deep the roots that matter reach. It sets how many millimetres of deficit correspond to one point of water content.",
+          "field_capacity": "Water content the soil holds after drainage, in cubic metres per cubic metre.",
+          "wilting_point": "Water content below which plants cannot extract water.",
+          "saturation": "Porosity. Leave empty to assume a margin above field capacity."
+        }
+      },
+      "confirm": {
+        "title": "Companions found on the probe",
+        "description": "These entities were found on the same device and will be used automatically.\n\nTemperature (liveness sentinel): {probe_temperature}\nBattery: {battery}\nTemperature calibration: {temperature_calibration}\nHumidity calibration: {humidity_calibration}\nSoil calibration: {soil_calibration}\n\nCalibration entities are read, never written, unless you enable write-back in the options."
+      },
+      "add_another": {
+        "title": "Another probe?",
+        "description": "Configured so far: {count} ({names}).\n\nTick the box to add another probe now. You can also add probes later from the integration options.",
+        "data": {
+          "add_another": "Add another probe"
+        }
+      }
+    },
+    "error": {
+      "moisture_not_numeric": "That entity does not publish a number.",
+      "moisture_out_of_range": "The probe must publish an index between 0 and 100.",
+      "deficit_not_numeric": "That entity does not publish a number.",
+      "deficit_unit_unknown": "The deficit unit is not a water depth this integration can convert. Use mm, cm, m or inches.",
+      "same_entity": "The probe and the deficit cannot be the same entity.",
+      "probe_already_exists": "A probe with this name is already configured.",
+      "probe_already_configured": "This probe sensor is already calibrated by another probe of this installation.",
+      "invalid_soil": "These values do not describe a real soil: the wilting point must be below field capacity, and field capacity at or below saturation."
+    },
+    "abort": {
+      "single_instance_allowed": "NeverDry Calibrator is already set up. Add your probes from its options, so everything stays in one place."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "NeverDry Calibrator",
+        "menu_options": {
+          "add_probe": "Add a probe",
+          "edit_probe": "Edit a probe",
+          "remove_probe": "Remove a probe",
+          "sampling": "Sampling rules",
+          "gates": "Quality gates and write-back"
+        }
+      },
+      "add_probe": {
+        "title": "Add a probe",
+        "description": "Pair another cheap probe with a water deficit. It gets its own device, its own entities and its own calibration history.",
+        "data": {
+          "name": "Probe name",
+          "moisture_entity": "Soil probe (0-100 index)",
+          "deficit_entity": "Water deficit sensor",
+          "ambient_temperature_entity": "Ambient temperature (optional)",
+          "irrigation_entity": "Irrigation valve or switch (optional)",
+          "probe_temperature_entity": "Probe temperature (optional, discovered by itself)"
+        }
+      },
+      "add_probe_soil": {
+        "title": "Soil reservoir",
+        "description": "The reservoir this probe sits in. If the deficit comes from NeverDry, use the same soil you configured there for that zone.",
+        "data": {
+          "soil_texture": "Soil texture",
+          "root_depth": "Root zone depth",
+          "root_depth_unit": "Depth unit",
+          "field_capacity": "Field capacity (custom only)",
+          "wilting_point": "Wilting point (custom only)",
+          "saturation": "Saturation (custom only)"
+        }
+      },
+      "edit_probe": {
+        "title": "Edit a probe",
+        "data": {
+          "selected_probe": "Probe"
+        }
+      },
+      "edit_probe_detail": {
+        "title": "Edit {probe}",
+        "description": "Changing the raw probe sensor or the deficit source invalidates the calibration: the collected samples describe a different instrument.",
+        "data": {
+          "name": "Probe name",
+          "moisture_entity": "Soil probe (0-100 index)",
+          "deficit_entity": "Water deficit sensor",
+          "ambient_temperature_entity": "Ambient temperature (optional)",
+          "irrigation_entity": "Irrigation valve or switch (optional)",
+          "probe_temperature_entity": "Probe temperature (optional, discovered by itself)"
+        }
+      },
+      "edit_probe_soil": {
+        "title": "Soil of {probe}",
+        "description": "Correcting the soil re-derives the collected history against the new reservoir and drops the current calibration, which then has to be earned again on the same data. The samples themselves are measurements and survive.",
+        "data": {
+          "soil_texture": "Soil texture",
+          "root_depth": "Root zone depth",
+          "root_depth_unit": "Depth unit",
+          "field_capacity": "Field capacity (custom only)",
+          "wilting_point": "Wilting point (custom only)",
+          "saturation": "Saturation (custom only)"
+        }
+      },
+      "remove_probe": {
+        "title": "Remove a probe",
+        "data": {
+          "selected_probe": "Probe"
+        }
+      },
+      "confirm_removal": {
+        "title": "Remove {probe}?",
+        "description": "This deletes the device of {probe}, its entities and every cycle it has collected. Those cycles took weeks of calendar time to gather and cannot be recovered.",
+        "data": {
+          "confirm_removal": "Yes, remove this probe and its history"
+        }
+      },
+      "sampling": {
+        "title": "Sampling rules",
+        "description": "Which observations are allowed to become samples, for every probe of this installation. Defaults suit a garden bed on a daily irrigation cycle.",
+        "data": {
+          "min_sample_interval_s": "Minimum interval between samples",
+          "drainage_minutes": "Drainage window after irrigation",
+          "probe_timeout_s": "Probe considered offline after",
+          "min_soil_temperature_c": "Refuse samples below this soil temperature"
+        },
+        "data_description": {
+          "drainage_minutes": "Time the wetting front needs to redistribute. Readings inside this window describe water in transit, not what the root zone keeps.",
+          "probe_timeout_s": "How long the probe temperature may be silent before the probe is treated as dead, typically a flat battery.",
+          "min_soil_temperature_c": "Frozen water does not behave like liquid water in a capacitive reading."
+        }
+      },
+      "gates": {
+        "title": "Quality gates and write-back",
+        "description": "How much evidence a calibration must have before it is published, for every probe of this installation. Lowering these publishes sooner and trusts less.",
+        "data": {
+          "min_cycles": "Minimum complete irrigation cycles",
+          "min_samples": "Minimum samples",
+          "min_raw_span": "Minimum probe range covered",
+          "min_r_squared": "Minimum fit quality (R squared)",
+          "allow_device_writeback": "Allow writing an offset into the probe"
+        },
+        "data_description": {
+          "min_cycles": "A cycle is one irrigation followed by a measurable dry-down. Five cycles is the default: a single wetting event is the most common way to get a confident and wrong calibration.",
+          "allow_device_writeback": "Off by default. When enabled, the apply_device_offset service may change a probe's own calibration, which drops every sample collected so far."
+        }
+      }
+    },
+    "error": {
+      "moisture_not_numeric": "That entity does not publish a number.",
+      "moisture_out_of_range": "The probe must publish an index between 0 and 100.",
+      "deficit_not_numeric": "That entity does not publish a number.",
+      "deficit_unit_unknown": "The deficit unit is not a water depth this integration can convert. Use mm, cm, m or inches.",
+      "same_entity": "The probe and the deficit cannot be the same entity.",
+      "probe_already_exists": "A probe with this name is already configured.",
+      "probe_already_configured": "This probe sensor is already calibrated by another probe of this installation.",
+      "invalid_soil": "These values do not describe a real soil: the wilting point must be below field capacity, and field capacity at or below saturation."
+    },
+    "abort": {
+      "no_probes": "There is no probe to work on yet. Add one first."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "calibrated_probes": {
+        "name": "Calibrated probes"
+      },
+      "calibrated_moisture": {
+        "name": "Calibrated soil moisture"
+      },
+      "calibration_status": {
+        "name": "Calibration status",
+        "state": {
+          "collecting": "Collecting evidence",
+          "calibrated": "Calibrated",
+          "drifting": "Drifting",
+          "probe_offline": "Probe offline",
+          "invalidated": "Invalidated"
+        }
+      },
+      "calibration_progress": {
+        "name": "Calibration progress"
+      },
+      "complete_cycles": {
+        "name": "Complete cycles"
+      },
+      "calibration_drift": {
+        "name": "Calibration drift"
+      },
+      "required_depletion": {
+        "name": "Required depletion"
+      }
+    },
+    "binary_sensor": {
+      "probe_online": {
+        "name": "Probe online"
+      },
+      "calibration_problem": {
+        "name": "Calibration problem"
+      }
+    }
+  },
+  "services": {
+    "calibrate_now": {
+      "name": "Calibrate now",
+      "description": "Refit the calibration immediately from the cycles collected so far.",
+      "fields": {
+        "probe": {
+          "name": "Probe",
+          "description": "Name of the probe. Leave empty to refit every probe."
+        }
+      }
+    },
+    "reset_calibration": {
+      "name": "Reset calibration",
+      "description": "Throw away every sample, cycle and fit of one probe and start collecting from scratch.",
+      "fields": {
+        "probe": {
+          "name": "Probe",
+          "description": "Name of the probe to reset. Required: this cannot act on every probe at once."
+        }
+      }
+    },
+    "mark_field_capacity": {
+      "name": "Mark field capacity",
+      "description": "Record the current reading of one probe as a field capacity anchor.",
+      "fields": {
+        "probe": {
+          "name": "Probe",
+          "description": "Name of the probe to anchor."
+        }
+      }
+    },
+    "apply_device_offset": {
+      "name": "Apply offset to the probe",
+      "description": "Write a calibration offset into the probe's own calibration entity.",
+      "fields": {
+        "probe": {
+          "name": "Probe",
+          "description": "Name of the probe to write to."
+        },
+        "offset": {
+          "name": "Offset",
+          "description": "Offset to write. Leave empty to use the suggested value."
+        }
+      }
+    },
+    "export_samples": {
+      "name": "Export samples",
+      "description": "Return every sample, cycle and fit behind the current calibrations.",
+      "fields": {
+        "probe": {
+          "name": "Probe",
+          "description": "Name of the probe. Leave empty to export every probe."
+        }
+      }
+    }
+  },
+  "issues": {
+    "irrigation_threshold_too_low": {
+      "title": "Irrigation waters too often to calibrate {probe}",
+      "description": "The zone behind {deficit_entity} irrigates at {configured} mm of depletion, but a calibration cycle must cover at least {required} mm, which is thirty percent of the {reservoir} mm this soil can hold.\n\nWith this regime the soil never dries enough between two irrigations: no cycle will ever count as evidence and {probe} will stay uncalibrated indefinitely.\n\nRaise the irrigation threshold of that zone to at least {required} mm, which is also ordinary practice for the plants it waters, or lower the required cycle span in the integration options and accept a weaker calibration."
+    }
+  }
+}

@@ -1,0 +1,38 @@
+[project]
+name = "neverdry-calibrator"
+version = "0.1.0"
+description = "Calibrate cheap soil moisture probes against a scientific water deficit model in Home Assistant"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "D"]
+ignore = [
+  # The module docstring convention used here puts the summary on the first
+  # line and a blank line after it, which D203/D213 contradict.
+  "D203",
+  "D213",
+  # Properties and value objects are documented as noun phrases ("The current
+  # deficit in millimetres"), which reads correctly and is what the Home
+  # Assistant core codebase does. Imperative mood is enforced nowhere else in
+  # this project and would only produce worse sentences here.
+  "D401",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["custom_components/neverdry_calibrator"]
