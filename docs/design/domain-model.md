@@ -69,6 +69,8 @@ Immutable, no identity, compared by value.
 | `Sample` | `samples.py` | `R`, `D`, `theta_ref`, temperatures, cycle index, soil fingerprint | That its `theta_ref` was derived through the reservoir named by its fingerprint. |
 | `CyclePolicy` | `cycles.py` | irrigation, anchor and span thresholds as fractions of TAW | That thresholds scale with the reservoir instead of being absolute millimetres. |
 | `QualityGates` | `calibration.py` | minimum cycles, samples, span, R squared, residual | What "earned" means. |
+| `PlacementPolicy` | `placement.py` | the five placement thresholds | What "worth reading" means. Advisory by construction: nothing consults it before publishing. |
+| `PlacementVerdict` | `placement.py` | confidence, every suspicion, the numbers behind them | That a suspicion is never published without the figure that raised it. |
 | `LineFit`, `TemperatureAwareFit` | `estimator.py` | slope, intercept, diagnostics, thermal term | Nothing beyond arithmetic. |
 | `CalibrationFit` | `calibration.py` | the published line, its provenance, its range and quality | That a line carries the range it was tested over and the reservoir it was fitted against. |
 | `CalibratedReading` | `calibration.py` | moisture, available fraction, implied deficit, flags | The output shape consumers read. |

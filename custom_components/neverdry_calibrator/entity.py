@@ -3,7 +3,7 @@
 Each probe is its own device, named as the user named it, attached to the
 integration hub through ``via_device``. That is what gives the two views people
 actually use: one integration card holding the whole installation, and one device
-per probe with its seven entities.
+per probe with its eight entities.
 
 All entities read the same published snapshot and hold no state of their own.
 """

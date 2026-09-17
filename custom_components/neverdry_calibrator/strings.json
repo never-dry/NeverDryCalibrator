@@ -207,6 +207,14 @@
           "invalidated": "Invalidated"
         }
       },
+      "probe_placement": {
+        "name": "Probe placement",
+        "state": {
+          "not_enough_evidence": "Not enough evidence",
+          "plausible": "Plausible",
+          "suspect": "Suspect"
+        }
+      },
       "calibration_progress": {
         "name": "Calibration progress"
       },
@@ -289,6 +297,26 @@
     "irrigation_threshold_too_low": {
       "title": "Irrigation waters too often to calibrate {probe}",
       "description": "The zone behind {deficit_entity} irrigates at {configured} mm of depletion, but a calibration cycle must cover at least {required} mm, which is thirty percent of the {reservoir} mm this soil can hold.\n\nWith this regime the soil never dries enough between two irrigations: no cycle will ever count as evidence and {probe} will stay uncalibrated indefinitely.\n\nRaise the irrigation threshold of that zone to at least {required} mm, which is also ordinary practice for the plants it waters, or lower the required cycle span in the integration options and accept a weaker calibration."
+    },
+    "placement_no_response": {
+      "title": "{probe} is not reading the water it is supposed to read",
+      "description": "Over {cycles_considered} irrigation cycles the soil went from field capacity to nearly dry, and the index published by {moisture_entity} travelled {median_raw_span} points in the meantime.\n\nA probe inside the wetted soil cannot stay still while the reservoir empties. Worth checking in this order: the probe sits outside the volume the irrigation actually wets, it sits above or below the root zone the deficit describes, or it is in a gravel pocket or a void where there is no soil water to sense.\n\nMove it closer to an emitter and to the depth the deficit models, push it in until the whole sensing length is in firm contact with the soil, then reset the calibration of {probe}: the samples collected so far describe the old position."
+    },
+    "placement_poor_contact": {
+      "title": "{probe} jumps while the soil stands still",
+      "description": "Between consecutive readings taken while the deficit barely moved, the index of {moisture_entity} changes by {still_raw_step} points.\n\nSoil water does not change that fast. An air gap around the shaft does, and so does a loose connection or a failing probe: the reading follows the air in the cavity rather than the water in the soil.\n\nPull the probe and reinsert it so the whole sensing length is in firm contact, backfilling and pressing the soil around it rather than dropping it into a wide hole. If the jumps survive a clean reinsertion, suspect the probe itself."
+    },
+    "placement_unstable_between_cycles": {
+      "title": "{probe} does not read the same soil twice",
+      "description": "Each cycle on its own looks clean, but the relation between index and water changes from one cycle to the next: across {cycles_considered} cycles the spread is {slope_spread} times the typical value.\n\nThe probe is reading correctly, and it is reading a spot that is not representative. Usually the water reaches it differently each time: an emitter that clogs and clears, a probe on the edge of the wetted bulb where a small change in flow moves the boundary past it, or runoff that takes a different path on different days.\n\nCheck the emitter that waters {probe} and move the probe well inside the wetted area rather than at its edge. The calibration is not so much wrong as averaging several different situations."
+    },
+    "placement_wet_anchor_drift": {
+      "title": "Field capacity keeps reading differently on {probe}",
+      "description": "After each irrigation and drainage the soil is at field capacity by definition, so {moisture_entity} should report about the same index every time. Instead it has moved {wet_anchor_drift} points in one direction across {cycles_considered} cycles.\n\nWhat is changing is the probe and the soil around it, not the water. The usual causes are the soil settling and pulling away from the shaft, roots growing into the sensing volume, or corroding electrodes.\n\nPull the probe, check the shaft and the soil contact, reinsert it firmly and reset the calibration of {probe}: the samples collected before the change describe a different instrument."
+    },
+    "placement_coarse_response": {
+      "title": "{probe} resolves the soil too coarsely to calibrate well",
+      "description": "Across the whole reservoir the index of {moisture_entity} covers about {points_per_reservoir} points, where {points_per_reservoir_required} is the minimum this method expects.\n\nAt that resolution one index point is worth more than a percentage point of soil water on its own, so the quantisation of the probe consumes most of the error budget before the calibration adds any of its own. A calibration will still be published if it passes its gates, and it will be blunt.\n\nA deeper or firmer insertion usually widens the range. If it does not, the probe is what it is, and its calibrated value should be read as a coarse indicator rather than a measurement."
     }
   }
 }

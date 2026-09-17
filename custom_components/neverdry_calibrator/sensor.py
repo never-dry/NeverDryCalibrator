@@ -1,4 +1,4 @@
-"""The entities a user reads: one calibrated value and four diagnostics.
+"""The entities a user reads: one calibrated value and its diagnostics.
 
 The split is deliberate and follows the honesty rule of this integration. The
 main entity carries only what has been earned: a soil moisture, published solely
@@ -24,7 +24,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .coordinator import CalibrationCoordinator
 from .entity import CalibratorEntity, hub_device_info
-from .model import CalibrationStatus
+from .model import CalibrationStatus, PlacementConfidence
 
 
 async def async_setup_entry(
@@ -40,6 +40,7 @@ async def async_setup_entry(
             [
                 CalibratedMoistureSensor(coordinator),
                 CalibrationStatusSensor(coordinator),
+                ProbePlacementSensor(coordinator),
                 CalibrationProgressSensor(coordinator),
                 CompleteCyclesSensor(coordinator),
                 CalibrationDriftSensor(coordinator),
@@ -96,6 +97,11 @@ class InstallationSummarySensor(SensorEntity):
                     "status": str(coordinator.data.status) if coordinator.data else "unknown",
                     "progress": coordinator.data.calibration_progress if coordinator.data else 0.0,
                     "complete_cycles": coordinator.data.complete_cycles if coordinator.data else 0,
+                    "placement": (
+                        str(coordinator.data.placement.confidence)
+                        if coordinator.data and coordinator.data.placement
+                        else "unknown"
+                    ),
                 }
                 for coordinator in self._runtime.values()
             },
@@ -246,6 +252,57 @@ class CalibrationStatusSensor(CalibratorEntity, SensorEntity):
             attributes["suggested_device_offset"] = round(offset, 2) if offset is not None else None
             attributes["device_gain_deviation"] = round(gain_deviation, 3) if gain_deviation is not None else None
         return attributes
+
+
+class ProbePlacementSensor(CalibratorEntity, SensorEntity):
+    """Whether the collected cycles suggest the probe is where it should be.
+
+    The fit answers "how much water is in the soil". The cycles quietly answer a
+    second question nobody asked them, and before this entity existed the answer
+    was thrown away: a placement fault came out as a failed gate named
+    ``r_squared``, which tells a user that a regression is unhappy and not that
+    the probe is sitting in a gravel pocket.
+
+    It states ``plausible`` at its most confident, never "good". These five
+    signatures catch five known ways of being wrong; silence from them is the
+    absence of evidence against the installation, not evidence for it.
+    """
+
+    entity_description = SensorEntityDescription(
+        key="probe_placement",
+        translation_key="probe_placement",
+        device_class=SensorDeviceClass.ENUM,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        options=[str(confidence) for confidence in PlacementConfidence],
+    )
+
+    def __init__(self, coordinator: CalibrationCoordinator) -> None:
+        """Create the entity that says whether the probe is in the right place."""
+        super().__init__(coordinator, "probe_placement")
+        self._attr_name = "Probe placement"
+        self._attr_options = [str(confidence) for confidence in PlacementConfidence]
+
+    @property
+    def native_value(self) -> str | None:
+        """The verdict, or unknown until enough cycles exist to have one."""
+        data = self.data
+        if data is None or data.placement is None:
+            return None
+        return str(data.placement.confidence)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Every suspicion, not only the one that became a repair, with its numbers.
+
+        The repair carries the most severe finding because a notification has to
+        be worth reading. This carries all of them, because the user who opens
+        the entity is already looking, and a second signature found on the way is
+        exactly what saves the next three weeks.
+        """
+        data = self.data
+        if data is None or data.placement is None:
+            return {}
+        return data.placement.to_dict()
 
 
 class CalibrationProgressSensor(CalibratorEntity, SensorEntity):
