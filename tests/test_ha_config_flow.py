@@ -14,6 +14,7 @@ from custom_components.neverdry_calibrator.const import (  # noqa: E402
     CONF_DEFICIT_ENTITY,
     CONF_MOISTURE_ENTITY,
     CONF_PROBES,
+    CONF_RAIN_ENTITY,
     CONF_ROOT_DEPTH,
     CONF_ROOT_DEPTH_UNIT,
     CONF_SOIL_TEXTURE,
@@ -41,15 +42,24 @@ def sources_fixture(hass):
         hass.states.async_set(f"sensor.deficit_{suffix}", "11.5", {"unit_of_measurement": "mm"})
 
 
-async def _add_probe(hass, flow_id, probe, add_another=False):
-    """Walk one probe through the probe, soil, confirm and add-another steps."""
+async def _add_probe(hass, flow_id, probe, add_another=False, rain=None):
+    """Walk one probe through the probe, soil, confirm and add-another steps.
+
+    The last probe falls through to the rain step, which is where the flow ends:
+    ``rain`` is what gets answered there, and ``None`` means the honest answer of
+    a site with no gauge, which must still produce an entry.
+    """
     result = await hass.config_entries.flow.async_configure(flow_id, probe)
     assert result["step_id"] == "soil", result
     result = await hass.config_entries.flow.async_configure(flow_id, SOIL)
     assert result["step_id"] == "confirm", result
     result = await hass.config_entries.flow.async_configure(flow_id, {})
     assert result["step_id"] == "add_another", result
-    return await hass.config_entries.flow.async_configure(flow_id, {"add_another": add_another})
+    result = await hass.config_entries.flow.async_configure(flow_id, {"add_another": add_another})
+    if add_another:
+        return result
+    assert result["step_id"] == "rain", result
+    return await hass.config_entries.flow.async_configure(flow_id, rain or {})
 
 
 async def test_the_flow_creates_one_entry_with_one_probe(hass, sources):
@@ -231,3 +241,73 @@ async def test_the_gates_are_tuned_for_the_whole_installation(hass, sources):
     assert result["type"] is FlowResultType.CREATE_ENTRY
     for coordinator in hass.data[DOMAIN][entry.entry_id].values():
         assert coordinator.session.gates.min_cycles == 3
+
+
+# ── The rain gauge ───────────────────────────────────────────────
+
+
+async def test_the_gauge_is_offered_once_and_can_be_skipped(hass, sources):
+    """Optional means the setup completes without answering it."""
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+
+    result = await _add_probe(hass, result["flow_id"], FIRST_PROBE)
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert CONF_RAIN_ENTITY not in result["data"]
+
+
+async def test_a_gauge_configured_at_setup_is_stored_on_the_installation(hass, sources):
+    """One gauge for the site, beside the probes rather than inside one of them."""
+    hass.states.async_set("sensor.rain_gauge", "12", {"unit_of_measurement": "mm"})
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+
+    result = await _add_probe(
+        hass,
+        result["flow_id"],
+        FIRST_PROBE,
+        rain={CONF_RAIN_ENTITY: "sensor.rain_gauge", "rain_sensor_type": "accumulator", "rain_quiet_minutes": 30},
+    )
+
+    assert result["data"][CONF_RAIN_ENTITY] == "sensor.rain_gauge"
+    assert result["data"]["rain_sensor_type"] == "accumulator"
+
+
+async def test_a_gauge_can_be_added_to_an_installation_already_running(hass, sources):
+    """The path that matters for an entry created before the gauge existed.
+
+    Without it, using a gauge would mean deleting the integration and starting
+    over, which throws away the weeks of cycles that are the whole asset here.
+    """
+    hass.states.async_set("sensor.rain_gauge", "12", {"unit_of_measurement": "mm"})
+    entry = await _installed(hass, [_record(FIRST_PROBE, "ortensia")])
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "rain"})
+    assert result["step_id"] == "rain"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {CONF_RAIN_ENTITY: "sensor.rain_gauge", "rain_sensor_type": "event", "rain_quiet_minutes": 45},
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    coordinator = hass.data[DOMAIN][entry.entry_id]["ortensia"]
+    assert coordinator.rain_entity == "sensor.rain_gauge"
+    assert coordinator.session.rain_policy.quiet_minutes == 45
+
+
+async def test_clearing_the_gauge_actually_removes_it(hass, sources):
+    """An empty answer has to beat the entity still named in the setup data."""
+    hass.states.async_set("sensor.rain_gauge", "12", {"unit_of_measurement": "mm"})
+    entry = await _installed(hass, [_record(FIRST_PROBE, "ortensia")])
+    hass.config_entries.async_update_entry(entry, data={**entry.data, CONF_RAIN_ENTITY: "sensor.rain_gauge"})
+    await hass.async_block_till_done()
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"next_step_id": "rain"})
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"rain_sensor_type": "event", "rain_quiet_minutes": 30}
+    )
+    await hass.async_block_till_done()
+
+    assert hass.data[DOMAIN][entry.entry_id]["ortensia"].rain_entity is None

@@ -4,10 +4,43 @@ All notable changes to this integration are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.3.0 - 2026-09-17
+
+Two features, and the second exists because the first made it possible. The
+calibration now has a witness for rain, and rain turns out to answer a question
+about the probe that no amount of irrigation ever could.
+
+**Validation on real hardware is still in progress**, as in 0.1.0. The error
+budget in `docs/design/calibration-method.md` is argued from soil physics and
+not yet measured against a probe in the ground, and the placement thresholds are
+argued rather than measured. Treat this version as field-testable rather than
+proven.
+
+There is no 0.2.0 release. That version number was built and installed for field
+testing only, and its contents ship here.
 
 ### Added
 
+- **A rain gauge can now be configured**, optionally, for the installation. A
+  shower that refills the profile counts as an irrigation: it opens a drainage
+  window, closes the dry-down cycle and starts the next one, exactly as a valve
+  would. Per-event gauges and running totals are both supported, credited by the
+  rule that a fall in a counter is a reset and never precipitation, and the
+  gauge can be added later to an entry that is already collecting.
+- Rain too small to count as a wetting no longer enters the fit unnoticed.
+  Readings taken in the rain, or in the drainage window after it, are refused
+  under their own name, `rain_wetting`, instead of being admitted as ordinary
+  dry-down points and biasing the slope wet.
+- Every cycle now records which water opened it: irrigation, rain, both, or
+  unknown. Published on the calibration status entity and in the diagnostics.
+- A sixth placement signature, `outside_wetted_bulb`, which needs the gauge and
+  answers a question the other five could not: whether the probe is in a bad
+  spot or in a spot the dripper never reaches. Rain wets the whole surface, a
+  dripper wets a bulb, and a probe that fills up only when it rains is outside
+  that bulb. It needs at least two complete cycles of each kind of water and
+  stays silent otherwise.
+- A per-probe *sheltered from rain* option, for a pot under a roof that the
+  gauge on the lawn says nothing about.
 - A placement diagnostic. The collected cycles are read for five signs that the
   probe is in the wrong place: no response while the reservoir empties, a range
   too coarse to meet the error budget, cycles that disagree with each other, a
@@ -17,9 +50,12 @@ All notable changes to this integration are documented here. The format follows
 - A repair for the most severe placement suspicion, one per probe, naming what
   to check and what to do about it, clearing itself when the signature clears.
 - The placement diagnostic never blocks a calibration: it sets no status, gates
-  nothing and withholds no reading. Four of its five thresholds are argued
+  nothing and withholds no reading. All but one of its thresholds are argued
   rather than measured, and an unmeasured threshold may advise a user, not
-  overrule one. The fifth follows from the error budget.
+  overrule one. The exception follows from the error budget.
+- The rain gauge is treated as a witness that water arrived, never as a
+  measurement of how much reached the root zone: heavy rain on dry soil runs
+  off, and nothing downstream multiplies by the depth the funnel caught.
 
 ## 0.1.0 - 2026-09-16
 

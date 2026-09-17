@@ -11,7 +11,7 @@ because those centimetres are not where the water the model describes goes. That
 is not a worse regression, it is a different problem with a different fix: one
 says recalibrate, the other says dig it up and move it.
 
-Five signatures, computed from data the cycles already carry:
+Six signatures, computed from data the cycles already carry:
 
 * **no_response** - the reservoir emptied and the index barely moved. The probe
   is outside the wetted volume, or outside the root zone the deficit describes.
@@ -25,6 +25,20 @@ Five signatures, computed from data the cycles already carry:
   into the sensing volume.
 * **poor_contact** - the index jumps while the deficit stands still. Soil does
   not do that. An air gap around the shaft does.
+* **outside_wetted_bulb** - the probe fills up when it rains and stays dry when
+  the zone is irrigated. Rain is the only water that is not aimed, so this is
+  the one comparison that separates "the probe is in a bad spot" from "the probe
+  is in a spot the dripper never reaches".
+
+The sixth one deserves its argument spelled out, because it is a comparison
+across two populations and those are usually where a statistic goes wrong. It is
+legitimate here for one specific reason: a cycle only opens when the *reference*
+says the profile is within ``wet_anchor_fraction`` of full, ten percent of the
+reservoir by default. Both anchors therefore describe the same soil state by
+construction, and the only thing free to differ between them is what the probe
+reported about it. The comparison is one-sided on purpose: rain reading higher
+than irrigation is the signature, and irrigation reading higher than rain is
+just a dripper that delivers more than a qualifying shower.
 
 Two limits are structural and neither more data nor a better statistic removes
 them, so they are stated here rather than discovered later:
@@ -57,7 +71,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
-from .cycles import DryDownCycle
+from .cycles import DryDownCycle, WaterSource
 from .samples import Sample
 from .soil import SoilProfile
 
@@ -70,14 +84,19 @@ class PlacementSuspicion(StrEnum):
     UNSTABLE_BETWEEN_CYCLES = "unstable_between_cycles"
     WET_ANCHOR_DRIFT = "wet_anchor_drift"
     POOR_CONTACT = "poor_contact"
+    OUTSIDE_WETTED_BULB = "outside_wetted_bulb"
 
 
 #: Worst first. Used to pick the single suspicion worth interrupting the user
 #: for: a probe that is not in the water at all makes every other finding about
-#: it moot, and five warnings about one probe is how a user learns to ignore
+#: it moot, and six warnings about one probe is how a user learns to ignore
 #: warnings.
 SUSPICION_SEVERITY: tuple[PlacementSuspicion, ...] = (
     PlacementSuspicion.NO_RESPONSE,
+    # Second, and above poor contact, because it is the most actionable finding
+    # the module can produce: it does not say "something is off with this
+    # probe", it says where the water is and where the probe is not.
+    PlacementSuspicion.OUTSIDE_WETTED_BULB,
     PlacementSuspicion.POOR_CONTACT,
     PlacementSuspicion.UNSTABLE_BETWEEN_CYCLES,
     PlacementSuspicion.WET_ANCHOR_DRIFT,
@@ -90,7 +109,7 @@ class PlacementConfidence(StrEnum):
 
     ``PLAUSIBLE`` is the strongest word available and is chosen over "good" on
     purpose: these signatures can only catch placements that misbehave in one of
-    five known ways. Silence from them is the absence of evidence against, never
+    six known ways. Silence from them is the absence of evidence against, never
     evidence for.
     """
 
@@ -101,7 +120,7 @@ class PlacementConfidence(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class PlacementPolicy:
-    """Thresholds for the five signatures.
+    """Thresholds for the six signatures.
 
     One of them is derived rather than chosen. ``min_points_per_reservoir``
     follows from the error budget: over the whole plant-available range, a loam
@@ -112,7 +131,7 @@ class PlacementPolicy:
     the "few percentage points" the method promises, before a single source of
     calibration error is added.
 
-    The other four are argued from how the failure looks, not measured. They are
+    The others are argued from how the failure looks, not measured. They are
     starting points to be tuned against probes whose placement is known, and
     until that exists they should be read as "worth a look", not as facts.
     """
@@ -133,6 +152,14 @@ class PlacementPolicy:
     max_still_raw_step: float = 2.0
     #: Standing-still pairs needed before their spread means anything.
     min_still_pairs: int = 5
+    #: Complete cycles of *each* kind of water before the two may be compared.
+    #: Two is the smallest number that is not an anecdote, and asking for more
+    #: would keep the comparison silent through most seasons: rain arrives when
+    #: it arrives, and a gardener cannot schedule the control group.
+    min_cycles_per_water_source: int = 2
+    #: Gap between the rain and irrigation wet anchors, as a share of the median
+    #: cycle span, above which the two waters are not filling the same soil.
+    max_wet_anchor_gap_fraction: float = 0.5
 
     def still_deficit_mm(self, total_available_water_mm: float) -> float:
         """Deficit change below which the soil is treated as unchanged [mm]."""
@@ -149,6 +176,8 @@ class PlacementPolicy:
             "still_deficit_fraction": self.still_deficit_fraction,
             "max_still_raw_step": self.max_still_raw_step,
             "min_still_pairs": self.min_still_pairs,
+            "min_cycles_per_water_source": self.min_cycles_per_water_source,
+            "max_wet_anchor_gap_fraction": self.max_wet_anchor_gap_fraction,
         }
 
     @classmethod
@@ -166,6 +195,10 @@ class PlacementPolicy:
             still_deficit_fraction=float(data.get("still_deficit_fraction", blank.still_deficit_fraction)),
             max_still_raw_step=float(data.get("max_still_raw_step", blank.max_still_raw_step)),
             min_still_pairs=int(data.get("min_still_pairs", blank.min_still_pairs)),
+            min_cycles_per_water_source=int(data.get("min_cycles_per_water_source", blank.min_cycles_per_water_source)),
+            max_wet_anchor_gap_fraction=float(
+                data.get("max_wet_anchor_gap_fraction", blank.max_wet_anchor_gap_fraction)
+            ),
         )
 
 
@@ -228,6 +261,21 @@ def _is_monotone(values: Sequence[float]) -> bool:
         return False
     deltas = [later - earlier for earlier, later in zip(values[:-1], values[1:], strict=True)]
     return all(delta >= 0 for delta in deltas) or all(delta <= 0 for delta in deltas)
+
+
+def _anchors_of(cycles: Sequence[DryDownCycle], source: WaterSource) -> list[float]:
+    """Wet-anchor index readings of the cycles opened by one kind of water.
+
+    Cycles carrying ``UNKNOWN`` are left out rather than assigned to the likelier
+    of the two. They were collected before the gauge existed, or while it was
+    unavailable, and a guess here would be a guess in the one comparison whose
+    whole value is that the two groups are known apart.
+    """
+    return [
+        cycle.wet_anchor.raw_percent
+        for cycle in cycles
+        if cycle.water_source is source and cycle.wet_anchor is not None
+    ]
 
 
 def _still_steps(samples: Sequence[Sample], still_deficit_mm: float) -> list[float]:
@@ -330,6 +378,27 @@ def assess_placement(
         evidence["still_raw_step_limit"] = policy.max_still_raw_step
         if median_step > policy.max_still_raw_step:
             suspicions.append(PlacementSuspicion.POOR_CONTACT)
+
+    # 6: does the probe fill up for rain and stay dry for the irrigation.
+    rain_anchors = _anchors_of(cycles, WaterSource.RAIN)
+    irrigation_anchors = _anchors_of(cycles, WaterSource.IRRIGATION)
+    evidence["rain_cycles"] = float(len(rain_anchors))
+    evidence["irrigation_cycles"] = float(len(irrigation_anchors))
+    evidence["cycles_per_water_source_required"] = float(policy.min_cycles_per_water_source)
+    enough_of_both = (
+        len(rain_anchors) >= policy.min_cycles_per_water_source
+        and len(irrigation_anchors) >= policy.min_cycles_per_water_source
+    )
+    if enough_of_both and median_raw_span > 0:
+        # Medians rather than means, with two or three values each: one cycle
+        # where the sprinkler was left on, or where a storm drowned the plot,
+        # would otherwise decide the verdict on its own.
+        gap = statistics.median(rain_anchors) - statistics.median(irrigation_anchors)
+        limit = policy.max_wet_anchor_gap_fraction * median_raw_span
+        evidence["wet_anchor_gap"] = round(gap, 2)
+        evidence["wet_anchor_gap_limit"] = round(limit, 2)
+        if gap > limit:
+            suspicions.append(PlacementSuspicion.OUTSIDE_WETTED_BULB)
 
     confidence = PlacementConfidence.SUSPECT if suspicions else PlacementConfidence.PLAUSIBLE
     return PlacementVerdict(confidence, tuple(suspicions), evidence)

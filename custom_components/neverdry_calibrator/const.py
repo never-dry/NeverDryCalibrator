@@ -28,6 +28,25 @@ CONF_IRRIGATION_ENTITY = "irrigation_entity"
 CONF_PROBE_TEMPERATURE_ENTITY = "probe_temperature_entity"
 CONF_BATTERY_ENTITY = "battery_entity"
 CONF_DEVICE_CALIBRATION_ENTITIES = "device_calibration_entities"
+#: Whether this probe is under a roof. A sheltered probe is never told about
+#: rain: the gauge on the lawn says nothing about a pot on a covered terrace,
+#: and crediting it there would close cycles that never happened.
+CONF_SHELTERED_FROM_RAIN = "sheltered_from_rain"
+
+# ── Rain gauge (per installation) ──────────────────────────────
+#: The gauge is one per site, not one per probe: the sky does not vary across a
+#: garden the way soil does. Probes that must not hear it say so themselves,
+#: with CONF_SHELTERED_FROM_RAIN.
+CONF_RAIN_ENTITY = "rain_entity"
+CONF_RAIN_SENSOR_TYPE = "rain_sensor_type"
+CONF_RAIN_EVENT_FRACTION = "rain_event_fraction"
+CONF_RAIN_QUIET_MINUTES = "rain_quiet_minutes"
+
+#: The two shapes a rain entity comes in, named as NeverDry names them so that a
+#: user configuring both integrations answers the same question the same way.
+RAIN_TYPE_EVENT = "event"
+RAIN_TYPE_ACCUMULATOR = "accumulator"
+RAIN_SENSOR_TYPES: list[str] = [RAIN_TYPE_EVENT, RAIN_TYPE_ACCUMULATOR]
 
 # ── Soil reservoir ─────────────────────────────────────────────
 CONF_SOIL_TEXTURE = "soil_texture"

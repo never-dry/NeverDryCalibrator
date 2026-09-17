@@ -19,9 +19,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
-from .cycles import CycleClosure, CyclePolicy, CycleTracker
+from .cycles import CycleClosure, CyclePolicy, CycleTracker, WaterSource
 from .estimator import LineFit, TemperatureAwareFit, fit_with_temperature, residual_rmse, two_point_line
 from .placement import PlacementPolicy, PlacementVerdict, assess_placement
+from .rain import RainPolicy, RainSensorKind, RainUpdate, RainWitness
 from .samples import (
     Admission,
     AdmissionPolicy,
@@ -243,8 +244,10 @@ class CalibrationSession:
     cycle_policy: CyclePolicy = field(default_factory=CyclePolicy)
     gates: QualityGates = field(default_factory=QualityGates)
     placement_policy: PlacementPolicy = field(default_factory=PlacementPolicy)
+    rain_policy: RainPolicy = field(default_factory=RainPolicy)
     buffer: SampleBuffer = field(default_factory=SampleBuffer)
     tracker: CycleTracker | None = None
+    rain_witness: RainWitness | None = None
     fit: CalibrationFit | None = None
     provisional_fit: CalibrationFit | None = None
     status: CalibrationStatus = CalibrationStatus.COLLECTING
@@ -256,10 +259,21 @@ class CalibrationSession:
     drift_rmse: float | None = None
 
     def __post_init__(self) -> None:
-        """Attach a tracker sized on the current reservoir when none was supplied."""
+        """Attach a tracker and a rain witness sized on the current reservoir.
+
+        The witness exists whether or not a gauge is configured. It costs one
+        object and it means nothing downstream has to ask twice whether rain is
+        being watched: a site without a gauge simply never feeds it, and every
+        rain-shaped answer it gives is the honest "no rain seen".
+        """
         if self.tracker is None:
             self.tracker = CycleTracker(
                 policy=self.cycle_policy,
+                total_available_water_mm=self.soil.total_available_water_mm,
+            )
+        if self.rain_witness is None:
+            self.rain_witness = RainWitness(
+                policy=self.rain_policy,
                 total_available_water_mm=self.soil.total_available_water_mm,
             )
 
@@ -315,10 +329,46 @@ class CalibrationSession:
             self.status = CalibrationStatus.CALIBRATED if self.fit else CalibrationStatus.COLLECTING
         return Admission.accept(stamped)
 
-    def note_irrigation(self, at: datetime) -> None:
-        """Tell the tracker that water reached the soil, from whatever witness saw it."""
+    def note_irrigation(self, at: datetime, source: WaterSource = WaterSource.UNKNOWN) -> None:
+        """Tell the tracker that water reached the soil, from whatever witness saw it.
+
+        ``source`` defaults to ``UNKNOWN`` rather than to irrigation because the
+        witness that fires most often, the deficit collapsing, genuinely cannot
+        tell the two apart. Only a caller that watched a valve or a gauge may
+        name the water, and only a named one is evidence.
+        """
         assert self.tracker is not None
-        self.tracker.note_irrigation(at)
+        self.tracker.note_irrigation(at, source)
+
+    def note_rain(self, value_mm: float | None, at: datetime, marker: str | None = None) -> RainUpdate:
+        """Offer one rain gauge reading, and act on it if an event just closed.
+
+        The session, not the caller, decides that a closed event is water
+        delivered: it is the same judgement as reading an irrigation off a
+        collapsing deficit, and that has always lived in the domain.
+        """
+        assert self.rain_witness is not None
+        update = self.rain_witness.observe(value_mm, at, marker)
+        if update.wetting_ended_at is not None:
+            self.note_irrigation(update.wetting_ended_at, WaterSource.RAIN)
+        return update
+
+    def rain_state(self, now: datetime) -> tuple[bool, float | None]:
+        """Whether it is raining, and how long since the last drop was credited."""
+        assert self.rain_witness is not None
+        return self.rain_witness.is_raining(now), self.rain_witness.seconds_since_rain(now)
+
+    def set_rain_sensor_kind(self, kind: RainSensorKind) -> None:
+        """Point the witness at a differently shaped gauge, dropping its baseline.
+
+        Called when the user changes the gauge or its type. A running total and a
+        tipping bucket have nothing in common except the unit, and differencing
+        across the change would credit the whole counter as one downpour.
+        """
+        assert self.rain_witness is not None
+        if self.rain_witness.kind is not kind:
+            self.rain_witness.kind = kind
+        self.rain_witness.rebase()
 
     def deficit_drop_is_irrigation(self, previous_deficit_mm: float, current_deficit_mm: float) -> bool:
         """Whether a fall in the deficit is large enough to be read as water delivered."""
@@ -571,9 +621,14 @@ class CalibrationSession:
         assert self.tracker is not None
         if soil.fingerprint() == self.soil.fingerprint():
             return
+        assert self.rain_witness is not None
         self.soil = soil
         self.buffer.rederive(soil)
         self.tracker.total_available_water_mm = soil.total_available_water_mm
+        # The rain threshold is a share of the reservoir, so a corrected soil
+        # moves it: the same shower that was a wetting on the old root depth may
+        # not be one on the new.
+        self.rain_witness.total_available_water_mm = soil.total_available_water_mm
         for cycle in self.tracker.cycles:
             if cycle.wet_anchor:
                 cycle.wet_anchor = cycle.wet_anchor.with_soil(soil)
@@ -603,8 +658,10 @@ class CalibrationSession:
     def reset(self, now: datetime) -> None:
         """Forget everything: samples, cycles and fit. The probe starts over."""
         assert self.tracker is not None
+        assert self.rain_witness is not None
         self.buffer.clear()
         self.tracker.reset()
+        self.rain_witness.forget()
         self.fit = None
         self.provisional_fit = None
         self.drift_rmse = None
@@ -666,8 +723,10 @@ class CalibrationSession:
             "cycle_policy": self.cycle_policy.to_dict(),
             "gates": self.gates.to_dict(),
             "placement_policy": self.placement_policy.to_dict(),
+            "rain_policy": self.rain_policy.to_dict(),
             "samples": self.buffer.to_list(),
             "tracker": self.tracker.to_dict(),
+            "rain_witness": self.rain_witness.to_dict() if self.rain_witness else None,
             "fit": self.fit.to_dict() if self.fit else None,
             "status": str(self.status),
             "last_rejection": str(self.last_rejection) if self.last_rejection else None,
@@ -691,8 +750,14 @@ class CalibrationSession:
         cycle_policy = CyclePolicy.from_dict(data.get("cycle_policy", {}))
         gates = QualityGates.from_dict(data.get("gates", {}))
         placement_policy = PlacementPolicy.from_dict(data.get("placement_policy", {}))
+        rain_policy = RainPolicy.from_dict(data.get("rain_policy", {}))
         buffer = SampleBuffer.from_list(data.get("samples", []))
         tracker = CycleTracker.from_dict(data.get("tracker", {}), cycle_policy, soil.total_available_water_mm)
+        rain_witness = RainWitness.from_dict(
+            data.get("rain_witness") or {},
+            rain_policy,
+            soil.total_available_water_mm,
+        )
 
         fit_data = data.get("fit")
         fit: CalibrationFit | None = None
@@ -710,8 +775,10 @@ class CalibrationSession:
             cycle_policy=cycle_policy,
             gates=gates,
             placement_policy=placement_policy,
+            rain_policy=rain_policy,
             buffer=buffer,
             tracker=tracker,
+            rain_witness=rain_witness,
             fit=fit,
         )
         session.status = CalibrationStatus(data.get("status", CalibrationStatus.COLLECTING))

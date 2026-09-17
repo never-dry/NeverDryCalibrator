@@ -33,8 +33,19 @@ Until it has enough evidence, it publishes nothing. That is the point.
 | Several irrigation cycles | Five by default. One wetting event is the most common way to get a confident and wrong calibration. |
 
 Optional, and used when present: an ambient temperature sensor (frost guard and
-fallback covariate), and an irrigation valve or switch (sharpens the timing of
-the drainage window).
+fallback covariate), an irrigation valve or switch (sharpens the timing of the
+drainage window), and **a rain gauge**.
+
+The gauge earns its own paragraph because it does three things rather than one.
+A shower that refills the profile counts as an irrigation, so a wet fortnight
+advances the campaign instead of stalling it. Rain too small to count stops
+quietly poisoning the fit: those readings are refused by name rather than
+admitted as ordinary dry-down points. And because rain wets the whole surface
+while a dripper wets a bulb around itself, comparing the two tells you something
+no single probe can work out on its own, which is whether the probe is anywhere
+the irrigation actually reaches. Without a gauge the integration behaves exactly
+as before: rain still arrives through the deficit collapsing, which catches
+downpours and misses showers.
 
 Everything else is discovered. From the probe's own device the integration picks
 up its temperature channel, its battery, and any calibration knobs the device
@@ -299,6 +310,7 @@ integration publishes them in millimetres too:
 | Derived threshold | Fraction | Meaning |
 |---|---|---|
 | Irrigation drop | 20% of available water | A fall of the deficit this large is read as water reaching the soil. |
+| Rain event | 20% | Rain accumulating to this depth counts as a wetting, the same share for the same reason. Needs a rain gauge. |
 | Wet anchor | 10% | A settled reading below this deficit is taken as field capacity. |
 | **Required depletion** | **30%** | **The deficit span a cycle must cover before it counts as evidence.** |
 
@@ -325,6 +337,11 @@ to irrigate at 3 mm of depletion can never produce one.
   answer about the installation, not a failure of the integration.
 * Writing an offset back into the device can remove a bias, never a wrong gain.
   The service refuses to do it when the fitted gain is too far off.
+* A rain gauge measures what fell on the funnel, not what entered the soil.
+  Heavy rain on dry clay runs off, so a rain event can overstate the water
+  considerably. It is used as a witness that water arrived and never as a
+  quantity: nothing multiplies by it. Rain that fell while Home Assistant was
+  down is lost rather than guessed at.
 
 ## Development
 

@@ -35,7 +35,14 @@ from .model import CalibrationSession, SoilProfile
 from .model.soil import InvalidSoilProfile
 from .probe import ProbeConfig, probes_of
 from .services import async_register_services, async_remove_services
-from .settings import admission_policy, cycle_policy, merged_settings, quality_gates, soil_profile
+from .settings import (
+    admission_policy,
+    cycle_policy,
+    merged_settings,
+    quality_gates,
+    rain_policy,
+    soil_profile,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -81,7 +88,12 @@ async def _build_coordinator(
     session.admission_policy = admission_policy(tuning)
     session.cycle_policy = cycle_policy(tuning)
     session.gates = quality_gates(tuning)
+    session.rain_policy = rain_policy(tuning)
     session.tracker.policy = session.cycle_policy
+    # The witness holds the policy by reference, the way the tracker does: the
+    # entry is the authority on tuning, and a policy restored from the store is
+    # whatever was configured the last time the samples were written.
+    session.rain_witness.policy = session.rain_policy
     session.apply_soil(soil, dt_util.utcnow())
 
     companions = _resolve_companions(hass, probe)
