@@ -4,7 +4,20 @@ All notable changes to this integration are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.3.0 - 2026-09-17
+
+Two features, and the second exists because the first made it possible. The
+calibration now has a witness for rain, and rain turns out to answer a question
+about the probe that no amount of irrigation ever could.
+
+**Validation on real hardware is still in progress**, as in 0.1.0. The error
+budget in `docs/design/calibration-method.md` is argued from soil physics and
+not yet measured against a probe in the ground, and the placement thresholds are
+argued rather than measured. Treat this version as field-testable rather than
+proven.
+
+There is no 0.2.0 release. That version number was built and installed for field
+testing only, and its contents ship here.
 
 ### Added
 
