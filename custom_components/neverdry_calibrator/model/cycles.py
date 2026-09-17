@@ -47,6 +47,34 @@ class CycleClosure(StrEnum):
     RESET = "reset"
 
 
+class WaterSource(StrEnum):
+    """Which water opened a cycle.
+
+    Recorded because the two kinds of water are delivered differently and that
+    difference is evidence. A dripper wets a bulb around itself; rain wets every
+    square centimetre of the surface. A probe that fills up after rain and stays
+    dry after an irrigation is not a badly calibrated probe, it is a probe
+    outside the bulb, and no statistic computed within one kind of water can say
+    so. :mod:`.placement` reads this field and nothing else does.
+
+    ``UNKNOWN`` is what a cycle opened before the gauge existed carries, and it
+    is kept distinct from the other two rather than guessed: a stored cycle from
+    an older version is not evidence about anything.
+
+    ``MIXED`` is what a cycle gets when the sky and the dripper both filled it
+    before it opened, which happens whenever somebody irrigates on a schedule
+    the morning after a storm. It is not a third kind of water, it is a refusal
+    to attribute: such a cycle is perfectly good evidence for the calibration and
+    no evidence at all for the wetted-bulb comparison, which needs to know which
+    water it is looking at.
+    """
+
+    IRRIGATION = "irrigation"
+    RAIN = "rain"
+    MIXED = "mixed"
+    UNKNOWN = "unknown"
+
+
 @dataclass(frozen=True, slots=True)
 class CyclePolicy:
     """Thresholds that decide what counts as water, as a wet anchor, and as a cycle.
@@ -115,6 +143,7 @@ class DryDownCycle:
     max_raw_percent: float | None = None
     closed_at: datetime | None = None
     closure: CycleClosure | None = None
+    water_source: WaterSource = WaterSource.UNKNOWN
 
     @property
     def is_open(self) -> bool:
@@ -186,6 +215,7 @@ class DryDownCycle:
             "max_raw_percent": self.max_raw_percent,
             "closed_at": self.closed_at.isoformat() if self.closed_at else None,
             "closure": str(self.closure) if self.closure else None,
+            "water_source": str(self.water_source),
         }
 
     @classmethod
@@ -207,6 +237,7 @@ class DryDownCycle:
             max_raw_percent=_optional_float(data.get("max_raw_percent")),
             closed_at=datetime.fromisoformat(closed_at) if closed_at else None,
             closure=CycleClosure(closure) if closure else None,
+            water_source=WaterSource(data.get("water_source", WaterSource.UNKNOWN)),
         )
 
 
@@ -235,6 +266,11 @@ class CycleTracker:
     cycles: list[DryDownCycle] = field(default_factory=list)
     last_irrigation_at: datetime | None = None
     next_index: int = 1
+    #: Which water was last delivered, waiting to be stamped on the cycle it
+    #: opens. It is held here rather than written straight onto a cycle because
+    #: the cycle does not exist yet: water closes the old one, and the new one is
+    #: born later, when the first settled reading arrives after drainage.
+    pending_water_source: WaterSource = WaterSource.UNKNOWN
 
     @property
     def open_cycle(self) -> DryDownCycle | None:
@@ -261,18 +297,57 @@ class CycleTracker:
         """Indices of the cycles the fit is allowed to read."""
         return {cycle.index for cycle in self.complete_cycles()}
 
-    def note_irrigation(self, at: datetime) -> None:
+    def complete_cycles_by_source(self) -> dict[str, int]:
+        """How many complete cycles each kind of water produced.
+
+        Published rather than kept private because it is the number that tells a
+        user why the wetted-bulb comparison is still silent: it needs both kinds
+        and a rainless month only produces one.
+        """
+        counts = {str(source): 0 for source in WaterSource}
+        for cycle in self.complete_cycles():
+            counts[str(cycle.water_source)] += 1
+        return counts
+
+    def note_irrigation(self, at: datetime, source: WaterSource = WaterSource.UNKNOWN) -> None:
         """Record that water was delivered: close the open cycle and start draining.
 
-        Called both when an irrigation entity switches off and when the deficit
-        itself collapses, because a site may irrigate by hand or be rained on and
-        the deficit is the only witness the integration is guaranteed to have.
+        Called by three witnesses that fail in different ways: an irrigation
+        entity switching off, which knows nothing about rain or a watering can; a
+        rain gauge, which knows nothing about the valve; and the collapse of the
+        deficit itself, which is slower than both and is the only one always
+        present. Whichever sees the water first opens the window, and ``source``
+        records which it was.
         """
         current = self.open_cycle
         if current is not None:
             current.close(at, CycleClosure.IRRIGATION)
         self.last_irrigation_at = at
+        self.pending_water_source = self._merged_source(source)
         self.state = TrackerState.DRAINING
+
+    def _merged_source(self, incoming: WaterSource) -> WaterSource:
+        """Combine a new witness with what is already known about the pending water.
+
+        Only while draining, because that is the one interval where two witnesses
+        can be describing the same wetting: the cycle has not opened yet, so
+        there is a single label for whatever arrives before it does.
+
+        Two rules, both of them about not losing information. A witness that
+        cannot name the water never erases a name another witness gave it, which
+        is what keeps the deficit collapsing after a shower from turning a known
+        rain into an unknown. And two *different* names are not a contest to be
+        won by the later one: they are a mixed wetting, and saying so is the
+        honest answer.
+        """
+        if self.state is not TrackerState.DRAINING:
+            return incoming
+        current = self.pending_water_source
+        if incoming is current or incoming is WaterSource.UNKNOWN:
+            return current
+        if current is WaterSource.UNKNOWN:
+            return incoming
+        return WaterSource.MIXED
 
     def observe(self, sample: Sample) -> DryDownCycle | None:
         """Attribute a sample to a cycle, opening one when the wet anchor arrives.
@@ -287,7 +362,12 @@ class CycleTracker:
         if self.state is not TrackerState.DRYING:
             if sample.deficit_mm > wet_threshold:
                 return None
-            cycle = DryDownCycle(index=self.next_index, opened_at=sample.taken_at, wet_anchor=sample)
+            cycle = DryDownCycle(
+                index=self.next_index,
+                opened_at=sample.taken_at,
+                wet_anchor=sample,
+                water_source=self.pending_water_source,
+            )
             self.next_index += 1
             self.cycles.append(cycle)
             self.state = TrackerState.DRYING
@@ -319,6 +399,7 @@ class CycleTracker:
         self.state = TrackerState.WAITING_FOR_WATER
         self.last_irrigation_at = None
         self.next_index = 1
+        self.pending_water_source = WaterSource.UNKNOWN
 
     def to_dict(self) -> dict:
         """Serialize for the sample store."""
@@ -327,6 +408,7 @@ class CycleTracker:
             "cycles": [cycle.to_dict() for cycle in self.cycles],
             "last_irrigation_at": self.last_irrigation_at.isoformat() if self.last_irrigation_at else None,
             "next_index": self.next_index,
+            "pending_water_source": str(self.pending_water_source),
         }
 
     @classmethod
@@ -346,4 +428,5 @@ class CycleTracker:
             cycles=cycles,
             last_irrigation_at=datetime.fromisoformat(last_irrigation) if last_irrigation else None,
             next_index=int(data.get("next_index", len(cycles) + 1)),
+            pending_water_source=WaterSource(data.get("pending_water_source", WaterSource.UNKNOWN)),
         )

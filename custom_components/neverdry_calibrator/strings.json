@@ -10,7 +10,8 @@
           "deficit_entity": "Water deficit sensor",
           "ambient_temperature_entity": "Ambient temperature (optional)",
           "irrigation_entity": "Irrigation valve or switch (optional)",
-          "probe_temperature_entity": "Probe temperature (optional, discovered by itself)"
+          "probe_temperature_entity": "Probe temperature (optional, discovered by itself)",
+          "sheltered_from_rain": "Sheltered from rain"
         },
         "data_description": {
           "name": "How this probe will appear: it names its device and its entities.",
@@ -18,7 +19,8 @@
           "deficit_entity": "A soil water deficit in millimetres or inches, produced by a water balance model.",
           "ambient_temperature_entity": "Used to refuse samples while the ground is frozen, and as a fallback when the probe reports no temperature of its own.",
           "irrigation_entity": "Improves the timing of the drainage window. Without it, irrigation is inferred from the deficit collapsing.",
-          "probe_temperature_entity": "Leave empty unless discovery picks the wrong one. The probe temperature is the sentinel that notices a flat battery."
+          "probe_temperature_entity": "Leave empty unless discovery picks the wrong one. The probe temperature is the sentinel that notices a flat battery.",
+          "sheltered_from_rain": "Tick for a probe under a roof, in a greenhouse or on a covered terrace. The rain gauge is then never applied to it: the sky over the lawn says nothing about soil the rain cannot reach."
         }
       },
       "soil": {
@@ -49,6 +51,20 @@
         "data": {
           "add_another": "Add another probe"
         }
+      },
+      "rain": {
+        "title": "Rain gauge (optional)",
+        "description": "If the site has a rain gauge, the calibration can count a shower as an irrigation: it opens a drainage window, closes the dry-down cycle and starts the next one. Rain also becomes evidence about placement, because it wets the whole surface while a dripper only wets a bulb around itself.\n\nLeave the entity empty if there is no gauge. Rain then reaches the calibration the way it always has, through the water deficit collapsing, which sees downpours and misses showers.",
+        "data": {
+          "rain_entity": "Rain gauge (optional)",
+          "rain_sensor_type": "What the gauge reports",
+          "rain_quiet_minutes": "Silence that ends a rain event"
+        },
+        "data_description": {
+          "rain_entity": "A sensor publishing millimetres or inches of precipitation. Leave empty to configure no gauge.",
+          "rain_sensor_type": "Per event for a tipping bucket, where the value is the depth of the last tip. Running total for a daily, rolling or lifetime counter, where only the increase counts.",
+          "rain_quiet_minutes": "A valve says when it closes; rain does not. After this long without a new millimetre the event is over, and the drainage window starts from the last drop rather than from now."
+        }
       }
     },
     "error": {
@@ -74,7 +90,8 @@
           "edit_probe": "Edit a probe",
           "remove_probe": "Remove a probe",
           "sampling": "Sampling rules",
-          "gates": "Quality gates and write-back"
+          "gates": "Quality gates and write-back",
+          "rain": "Rain gauge"
         }
       },
       "add_probe": {
@@ -86,7 +103,11 @@
           "deficit_entity": "Water deficit sensor",
           "ambient_temperature_entity": "Ambient temperature (optional)",
           "irrigation_entity": "Irrigation valve or switch (optional)",
-          "probe_temperature_entity": "Probe temperature (optional, discovered by itself)"
+          "probe_temperature_entity": "Probe temperature (optional, discovered by itself)",
+          "sheltered_from_rain": "Sheltered from rain"
+        },
+        "data_description": {
+          "sheltered_from_rain": "Tick for a probe under a roof, in a greenhouse or on a covered terrace. The rain gauge is then never applied to it: the sky over the lawn says nothing about soil the rain cannot reach."
         }
       },
       "add_probe_soil": {
@@ -116,7 +137,11 @@
           "deficit_entity": "Water deficit sensor",
           "ambient_temperature_entity": "Ambient temperature (optional)",
           "irrigation_entity": "Irrigation valve or switch (optional)",
-          "probe_temperature_entity": "Probe temperature (optional, discovered by itself)"
+          "probe_temperature_entity": "Probe temperature (optional, discovered by itself)",
+          "sheltered_from_rain": "Sheltered from rain"
+        },
+        "data_description": {
+          "sheltered_from_rain": "Tick for a probe under a roof, in a greenhouse or on a covered terrace. The rain gauge is then never applied to it: the sky over the lawn says nothing about soil the rain cannot reach."
         }
       },
       "edit_probe_soil": {
@@ -172,6 +197,20 @@
         "data_description": {
           "min_cycles": "A cycle is one irrigation followed by a measurable dry-down. Five cycles is the default: a single wetting event is the most common way to get a confident and wrong calibration.",
           "allow_device_writeback": "Off by default. When enabled, the apply_device_offset service may change a probe's own calibration, which drops every sample collected so far."
+        }
+      },
+      "rain": {
+        "title": "Rain gauge (optional)",
+        "description": "If the site has a rain gauge, the calibration can count a shower as an irrigation: it opens a drainage window, closes the dry-down cycle and starts the next one. Rain also becomes evidence about placement, because it wets the whole surface while a dripper only wets a bulb around itself.\n\nLeave the entity empty if there is no gauge. Rain then reaches the calibration the way it always has, through the water deficit collapsing, which sees downpours and misses showers.",
+        "data": {
+          "rain_entity": "Rain gauge (optional)",
+          "rain_sensor_type": "What the gauge reports",
+          "rain_quiet_minutes": "Silence that ends a rain event"
+        },
+        "data_description": {
+          "rain_entity": "A sensor publishing millimetres or inches of precipitation. Leave empty to configure no gauge.",
+          "rain_sensor_type": "Per event for a tipping bucket, where the value is the depth of the last tip. Running total for a daily, rolling or lifetime counter, where only the increase counts.",
+          "rain_quiet_minutes": "A valve says when it closes; rain does not. After this long without a new millimetre the event is over, and the drainage window starts from the last drop rather than from now."
         }
       }
     },
@@ -317,6 +356,18 @@
     "placement_coarse_response": {
       "title": "{probe} resolves the soil too coarsely to calibrate well",
       "description": "Across the whole reservoir the index of {moisture_entity} covers about {points_per_reservoir} points, where {points_per_reservoir_required} is the minimum this method expects.\n\nAt that resolution one index point is worth more than a percentage point of soil water on its own, so the quantisation of the probe consumes most of the error budget before the calibration adds any of its own. A calibration will still be published if it passes its gates, and it will be blunt.\n\nA deeper or firmer insertion usually widens the range. If it does not, the probe is what it is, and its calibrated value should be read as a coarse indicator rather than a measurement."
+    },
+    "placement_outside_wetted_bulb": {
+      "title": "{probe} fills up when it rains and not when the zone is watered",
+      "description": "Across {rain_cycles} cycles opened by rain and {irrigation_cycles} opened by the irrigation, field capacity read {wet_anchor_gap} index points higher after rain than after watering. Both numbers describe the same soil state: a cycle only opens once the water balance says the profile is nearly full, so what differs is the probe's answer, not the water.\n\nRain falls on every square centimetre. A dripper wets a bulb around itself, and a probe outside that bulb is watered only by the weather. This is the one failure a single probe cannot diagnose on its own, and the rain gauge is what makes it visible.\n\nMove {probe} to about half the wetted radius from an emitter: 8 to 12 cm on sand, 12 to 20 cm on loam, 20 to 30 cm on clay. Never directly under the emitter. Then reset its calibration: the samples collected so far describe the old position."
+    }
+  },
+  "selector": {
+    "rain_sensor_type": {
+      "options": {
+        "event": "Per event (tipping bucket)",
+        "accumulator": "Running total (daily, rolling or lifetime)"
+      }
     }
   }
 }

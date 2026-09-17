@@ -1,4 +1,4 @@
-"""The placement diagnostic: five signatures, and the silence around them.
+"""The placement diagnostic: six signatures, and the silence around them.
 
 Each test builds the cycles that produce one signature and asserts that exactly
 that signature is raised. The cases that assert *nothing* is raised carry as much
@@ -19,6 +19,7 @@ from model import (
     PlacementSuspicion,
     Sample,
     SoilProfile,
+    WaterSource,
     assess_placement,
 )
 from model.cycles import DryDownCycle
@@ -293,3 +294,124 @@ def test_a_temperature_only_probe_still_reads_as_placed():
         index_fn=lambda soil, deficit, temperature, noise: probe_index(soil, deficit, temperature, noise),
     )
     assert session.assess_placement().suspicions == ()
+
+
+# ── Outside the wetted bulb ──────────────────────────────────────
+
+
+def _sourced(cycles: list[DryDownCycle], sources: list[WaterSource]) -> list[DryDownCycle]:
+    """Label a run of cycles with the water that opened each of them."""
+    for cycle, source in zip(cycles, sources, strict=True):
+        cycle.water_source = source
+    return cycles
+
+
+def _bulb_cycles(soil: SoilProfile, rain_wet: float, irrigation_wet: float) -> list[DryDownCycle]:
+    """Four cycles, two of each water, alternating as a real season would.
+
+    Alternating rather than grouped on purpose: two rainy weeks followed by two
+    dry ones would confound the comparison with anything that drifts over time,
+    and the interleaved layout is the one a user actually lives through.
+    """
+    cycles = [
+        _cycle(soil, 1, wet_raw=rain_wet, dry_raw=RAW_AT_WILTING_POINT),
+        _cycle(soil, 2, wet_raw=irrigation_wet, dry_raw=RAW_AT_WILTING_POINT),
+        _cycle(soil, 3, wet_raw=rain_wet, dry_raw=RAW_AT_WILTING_POINT),
+        _cycle(soil, 4, wet_raw=irrigation_wet, dry_raw=RAW_AT_WILTING_POINT),
+    ]
+    return _sourced(
+        cycles,
+        [WaterSource.RAIN, WaterSource.IRRIGATION, WaterSource.RAIN, WaterSource.IRRIGATION],
+    )
+
+
+def test_a_probe_the_dripper_never_reaches_is_named():
+    """Full after rain, half full after watering: the probe is outside the bulb.
+
+    Both anchors were taken at the same deficit, because a cycle only opens once
+    the water balance says the profile is nearly full. The water is identical;
+    only the probe's answer differs.
+    """
+    soil = loam()
+    cycles = _bulb_cycles(soil, rain_wet=RAW_AT_FIELD_CAPACITY, irrigation_wet=RAW_AT_FIELD_CAPACITY - 30.0)
+
+    verdict = assess_placement(cycles, [], soil)
+
+    assert PlacementSuspicion.OUTSIDE_WETTED_BULB in verdict.suspicions
+    assert verdict.evidence["wet_anchor_gap"] == 30.0
+
+
+def test_the_bulb_finding_outranks_everything_but_a_silent_probe():
+    """It is the most actionable diagnosis available: it says where to dig."""
+    soil = loam()
+    cycles = _bulb_cycles(soil, rain_wet=RAW_AT_FIELD_CAPACITY, irrigation_wet=RAW_AT_FIELD_CAPACITY - 30.0)
+
+    verdict = assess_placement(cycles, [], soil)
+
+    assert verdict.primary is PlacementSuspicion.OUTSIDE_WETTED_BULB
+
+
+def test_a_probe_inside_the_bulb_is_not_accused():
+    """Rain and irrigation fill the same soil, so the two anchors agree."""
+    soil = loam()
+    cycles = _bulb_cycles(soil, rain_wet=RAW_AT_FIELD_CAPACITY, irrigation_wet=RAW_AT_FIELD_CAPACITY - 1.0)
+
+    verdict = assess_placement(cycles, [], soil)
+
+    assert PlacementSuspicion.OUTSIDE_WETTED_BULB not in verdict.suspicions
+
+
+def test_a_dripper_wetter_than_the_rain_is_not_a_placement_fault():
+    """The comparison is one-sided: more water from the dripper is just more water."""
+    soil = loam()
+    cycles = _bulb_cycles(soil, rain_wet=RAW_AT_FIELD_CAPACITY - 30.0, irrigation_wet=RAW_AT_FIELD_CAPACITY)
+
+    verdict = assess_placement(cycles, [], soil)
+
+    assert PlacementSuspicion.OUTSIDE_WETTED_BULB not in verdict.suspicions
+
+
+def test_without_both_kinds_of_water_the_comparison_stays_silent():
+    """A rainless month leaves nothing to compare, and silence is the honest output."""
+    soil = loam()
+    cycles = _sourced(
+        _healthy(soil, count=4),
+        [WaterSource.IRRIGATION] * 4,
+    )
+
+    verdict = assess_placement(cycles, [], soil)
+
+    assert PlacementSuspicion.OUTSIDE_WETTED_BULB not in verdict.suspicions
+    assert verdict.evidence["rain_cycles"] == 0.0
+    assert verdict.evidence["irrigation_cycles"] == 4.0
+
+
+def test_one_cycle_of_each_is_an_anecdote_and_not_evidence():
+    """Two of each is the floor: a single pair cannot separate a difference from noise."""
+    soil = loam()
+    cycles = _sourced(
+        [
+            _cycle(soil, 1, wet_raw=RAW_AT_FIELD_CAPACITY, dry_raw=RAW_AT_WILTING_POINT),
+            _cycle(soil, 2, wet_raw=RAW_AT_FIELD_CAPACITY - 30.0, dry_raw=RAW_AT_WILTING_POINT),
+            _cycle(soil, 3, wet_raw=RAW_AT_FIELD_CAPACITY - 30.0, dry_raw=RAW_AT_WILTING_POINT),
+        ],
+        [WaterSource.RAIN, WaterSource.IRRIGATION, WaterSource.UNKNOWN],
+    )
+
+    verdict = assess_placement(cycles, [], soil)
+
+    assert PlacementSuspicion.OUTSIDE_WETTED_BULB not in verdict.suspicions
+
+
+def test_cycles_of_unknown_or_mixed_water_are_left_out_of_the_comparison():
+    """Attributing them by guesswork would break the one property that makes it work."""
+    soil = loam()
+    cycles = _sourced(
+        _healthy(soil, count=4),
+        [WaterSource.UNKNOWN, WaterSource.MIXED, WaterSource.RAIN, WaterSource.IRRIGATION],
+    )
+
+    verdict = assess_placement(cycles, [], soil)
+
+    assert verdict.evidence["rain_cycles"] == 1.0
+    assert verdict.evidence["irrigation_cycles"] == 1.0

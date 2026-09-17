@@ -16,7 +16,7 @@ from .calibration import (
     QualityGates,
     line_summary,
 )
-from .cycles import CycleClosure, CyclePolicy, CycleTracker, DryDownCycle, TrackerState
+from .cycles import CycleClosure, CyclePolicy, CycleTracker, DryDownCycle, TrackerState, WaterSource
 from .estimator import LineFit, TemperatureAwareFit, fit_with_temperature, theil_sen, two_point_line
 from .placement import (
     PlacementConfidence,
@@ -25,6 +25,7 @@ from .placement import (
     PlacementVerdict,
     assess_placement,
 )
+from .rain import RainPolicy, RainSensorKind, RainUpdate, RainWitness
 from .samples import (
     Admission,
     AdmissionPolicy,
@@ -61,6 +62,10 @@ __all__ = [
     "PlacementVerdict",
     "ProbeLiveness",
     "QualityGates",
+    "RainPolicy",
+    "RainSensorKind",
+    "RainUpdate",
+    "RainWitness",
     "RejectionReason",
     "Sample",
     "SampleBuffer",
@@ -68,6 +73,7 @@ __all__ = [
     "SoilTexture",
     "TemperatureAwareFit",
     "TrackerState",
+    "WaterSource",
     "assess_placement",
     "deficit_to_mm",
     "depth_to_m",

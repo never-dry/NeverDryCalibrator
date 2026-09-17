@@ -35,6 +35,14 @@ def _probe_diagnostics(coordinator: CalibrationCoordinator) -> dict[str, Any]:
             "moisture_percent": round(data.reading.moisture * 100.0, 2) if data and data.reading else None,
             "progress": data.calibration_progress if data else None,
             "complete_cycles": data.complete_cycles if data else None,
+            "cycles_by_water_source": dict(data.cycles_by_source) if data else None,
+        },
+        "rain": {
+            "entity": coordinator.rain_entity,
+            "sheltered": coordinator.probe.sheltered_from_rain,
+            "raining": data.raining if data else None,
+            "accumulated_mm": data.rain_accumulated_mm if data else None,
+            "event_mm": data.rain_event_depth_mm if data else None,
         },
         "calibration": export,
     }

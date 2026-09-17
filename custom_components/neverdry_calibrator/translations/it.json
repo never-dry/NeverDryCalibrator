@@ -10,7 +10,8 @@
           "deficit_entity": "Sensore di deficit idrico",
           "ambient_temperature_entity": "Temperatura ambiente (opzionale)",
           "irrigation_entity": "Valvola o interruttore di irrigazione (opzionale)",
-          "probe_temperature_entity": "Temperatura della sonda (opzionale, viene scoperta da sola)"
+          "probe_temperature_entity": "Temperatura della sonda (opzionale, viene scoperta da sola)",
+          "sheltered_from_rain": "Al riparo dalla pioggia"
         },
         "data_description": {
           "name": "Come comparira' questa sonda: da' il nome al suo dispositivo e alle sue entita'.",
@@ -18,7 +19,8 @@
           "deficit_entity": "Un deficit idrico del terreno in millimetri o pollici, prodotto da un modello di bilancio idrico.",
           "ambient_temperature_entity": "Serve a rifiutare i campioni con terreno gelato e come ripiego quando la sonda non pubblica una propria temperatura.",
           "irrigation_entity": "Migliora la tempistica della finestra di drenaggio. Senza, l'irrigazione viene dedotta dal crollo del deficit.",
-          "probe_temperature_entity": "Lascia vuoto a meno che la scoperta automatica non scelga quella sbagliata. La temperatura della sonda e' la sentinella che si accorge della batteria scarica."
+          "probe_temperature_entity": "Lascia vuoto a meno che la scoperta automatica non scelga quella sbagliata. La temperatura della sonda e' la sentinella che si accorge della batteria scarica.",
+          "sheltered_from_rain": "Spunta per una sonda sotto una tettoia, in serra o su un terrazzo coperto. Il pluviometro non le viene mai applicato: il cielo sopra il prato non dice niente su un terreno che la pioggia non raggiunge."
         }
       },
       "soil": {
@@ -49,6 +51,20 @@
         "data": {
           "add_another": "Aggiungi un'altra sonda"
         }
+      },
+      "rain": {
+        "title": "Pluviometro (opzionale)",
+        "description": "Se l'impianto ha un pluviometro, la calibrazione puo' contare un acquazzone come un'irrigazione: apre la finestra di drenaggio, chiude il ciclo di asciugatura e avvia il successivo. La pioggia diventa anche una prova sul posizionamento, perche' bagna tutta la superficie mentre un gocciolatoio bagna solo un bulbo intorno a se'.\n\nLascia vuota l'entita' se non c'e' un pluviometro. La pioggia arrivera' alla calibrazione come ha sempre fatto, attraverso il crollo del deficit idrico, che vede gli acquazzoni e si perde le piogge leggere.",
+        "data": {
+          "rain_entity": "Pluviometro (opzionale)",
+          "rain_sensor_type": "Che cosa pubblica il pluviometro",
+          "rain_quiet_minutes": "Silenzio che chiude un evento di pioggia"
+        },
+        "data_description": {
+          "rain_entity": "Un sensore che pubblica millimetri o pollici di precipitazione. Lascia vuoto per non configurare nessun pluviometro.",
+          "rain_sensor_type": "Per evento se e' a bascula e il valore e' la lama dell'ultimo scatto. Totale progressivo se e' un contatore giornaliero, su finestra mobile o da installazione, dove conta solo l'aumento.",
+          "rain_quiet_minutes": "Una valvola dice quando si chiude, la pioggia no. Passato questo tempo senza un nuovo millimetro l'evento e' finito, e la finestra di drenaggio parte dall'ultima goccia invece che da adesso."
+        }
       }
     },
     "error": {
@@ -74,7 +90,8 @@
           "edit_probe": "Modifica una sonda",
           "remove_probe": "Rimuovi una sonda",
           "sampling": "Regole di campionamento",
-          "gates": "Soglie di qualita' e scrittura sul dispositivo"
+          "gates": "Soglie di qualita' e scrittura sul dispositivo",
+          "rain": "Pluviometro"
         }
       },
       "add_probe": {
@@ -86,7 +103,11 @@
           "deficit_entity": "Sensore di deficit idrico",
           "ambient_temperature_entity": "Temperatura ambiente (opzionale)",
           "irrigation_entity": "Valvola o interruttore di irrigazione (opzionale)",
-          "probe_temperature_entity": "Temperatura della sonda (opzionale, viene scoperta da sola)"
+          "probe_temperature_entity": "Temperatura della sonda (opzionale, viene scoperta da sola)",
+          "sheltered_from_rain": "Al riparo dalla pioggia"
+        },
+        "data_description": {
+          "sheltered_from_rain": "Spunta per una sonda sotto una tettoia, in serra o su un terrazzo coperto. Il pluviometro non le viene mai applicato: il cielo sopra il prato non dice niente su un terreno che la pioggia non raggiunge."
         }
       },
       "add_probe_soil": {
@@ -116,7 +137,11 @@
           "deficit_entity": "Sensore di deficit idrico",
           "ambient_temperature_entity": "Temperatura ambiente (opzionale)",
           "irrigation_entity": "Valvola o interruttore di irrigazione (opzionale)",
-          "probe_temperature_entity": "Temperatura della sonda (opzionale, viene scoperta da sola)"
+          "probe_temperature_entity": "Temperatura della sonda (opzionale, viene scoperta da sola)",
+          "sheltered_from_rain": "Al riparo dalla pioggia"
+        },
+        "data_description": {
+          "sheltered_from_rain": "Spunta per una sonda sotto una tettoia, in serra o su un terrazzo coperto. Il pluviometro non le viene mai applicato: il cielo sopra il prato non dice niente su un terreno che la pioggia non raggiunge."
         }
       },
       "edit_probe_soil": {
@@ -172,6 +197,20 @@
         "data_description": {
           "min_cycles": "Un ciclo e' un'irrigazione seguita da un'asciugatura misurabile. Il default e' cinque: un solo evento di bagnatura e' il modo piu' comune di ottenere una calibrazione sicura e sbagliata.",
           "allow_device_writeback": "Disattivato di default. Se attivo, il servizio apply_device_offset puo' modificare la calibrazione di una sonda, e questo azzera tutti i campioni raccolti."
+        }
+      },
+      "rain": {
+        "title": "Pluviometro (opzionale)",
+        "description": "Se l'impianto ha un pluviometro, la calibrazione puo' contare un acquazzone come un'irrigazione: apre la finestra di drenaggio, chiude il ciclo di asciugatura e avvia il successivo. La pioggia diventa anche una prova sul posizionamento, perche' bagna tutta la superficie mentre un gocciolatoio bagna solo un bulbo intorno a se'.\n\nLascia vuota l'entita' se non c'e' un pluviometro. La pioggia arrivera' alla calibrazione come ha sempre fatto, attraverso il crollo del deficit idrico, che vede gli acquazzoni e si perde le piogge leggere.",
+        "data": {
+          "rain_entity": "Pluviometro (opzionale)",
+          "rain_sensor_type": "Che cosa pubblica il pluviometro",
+          "rain_quiet_minutes": "Silenzio che chiude un evento di pioggia"
+        },
+        "data_description": {
+          "rain_entity": "Un sensore che pubblica millimetri o pollici di precipitazione. Lascia vuoto per non configurare nessun pluviometro.",
+          "rain_sensor_type": "Per evento se e' a bascula e il valore e' la lama dell'ultimo scatto. Totale progressivo se e' un contatore giornaliero, su finestra mobile o da installazione, dove conta solo l'aumento.",
+          "rain_quiet_minutes": "Una valvola dice quando si chiude, la pioggia no. Passato questo tempo senza un nuovo millimetro l'evento e' finito, e la finestra di drenaggio parte dall'ultima goccia invece che da adesso."
         }
       }
     },
@@ -317,6 +356,18 @@
     "placement_coarse_response": {
       "title": "{probe} distingue il terreno troppo grossolanamente",
       "description": "Sull'intero serbatoio l'indice di {moisture_entity} copre circa {points_per_reservoir} punti, dove {points_per_reservoir_required} e' il minimo che questo metodo si aspetta.\n\nA quella risoluzione un punto di indice vale da solo piu' di un punto percentuale di acqua nel terreno, quindi la quantizzazione della sonda si mangia gran parte del budget di errore prima che la calibrazione aggiunga il proprio. Una calibrazione verra' comunque pubblicata se supera i suoi criteri, e sara' grossolana.\n\nUn inserimento piu' profondo o piu' saldo di solito allarga l'escursione. Se non succede, la sonda e' quella che e', e il suo valore calibrato va letto come indicatore grossolano piuttosto che come misura."
+    },
+    "placement_outside_wetted_bulb": {
+      "title": "{probe} si riempie quando piove e non quando la zona viene irrigata",
+      "description": "Su {rain_cycles} cicli aperti dalla pioggia e {irrigation_cycles} aperti dall'irrigazione, la capacita' di campo ha letto {wet_anchor_gap} punti indice piu' in alto dopo la pioggia che dopo l'irrigazione. I due numeri descrivono lo stesso stato del terreno: un ciclo si apre solo quando il bilancio idrico dice che il profilo e' quasi pieno, quindi a cambiare e' la risposta della sonda, non l'acqua.\n\nLa pioggia cade su ogni centimetro quadrato. Un gocciolatoio bagna un bulbo intorno a se', e una sonda fuori da quel bulbo viene irrigata solo dal meteo. E' l'unico guasto che una sonda da sola non puo' diagnosticare, e il pluviometro e' cio' che lo rende visibile.\n\nSposta {probe} a circa meta' del raggio bagnato da un gocciolatoio: 8-12 cm su sabbia, 12-20 cm su medio impasto, 20-30 cm su argilla. Mai esattamente sotto il gocciolatoio. Poi azzera la calibrazione: i campioni raccolti finora descrivono la vecchia posizione."
+    }
+  },
+  "selector": {
+    "rain_sensor_type": {
+      "options": {
+        "event": "Per evento (pluviometro a bascula)",
+        "accumulator": "Totale progressivo (giornaliero, mobile o da installazione)"
+      }
     }
   }
 }

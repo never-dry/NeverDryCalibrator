@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from helpers import loam
-from model import CyclePolicy, CycleTracker, Sample, TrackerState
+from model import CyclePolicy, CycleTracker, Sample, TrackerState, WaterSource
 
 SOIL = loam()
 TAW = SOIL.total_available_water_mm
@@ -111,3 +111,89 @@ def test_tracker_round_trips_through_storage():
     restored = CycleTracker.from_dict(tracker.to_dict(), tracker.policy, TAW)
     assert len(restored.complete_cycles()) == 1
     assert restored.next_index == tracker.next_index
+
+
+# ── Which water filled the cycle ─────────────────────────────────
+
+
+def test_a_cycle_records_the_water_that_opened_it():
+    """The label is stamped when the cycle is born, not when the water arrived."""
+    tracker = _tracker()
+    tracker.note_irrigation(START, WaterSource.RAIN)
+
+    tracker.observe(_sample(deficit_mm=0.5, minutes=240))
+
+    assert tracker.cycles[-1].water_source is WaterSource.RAIN
+
+
+def test_an_unnamed_witness_never_erases_a_named_one():
+    """The deficit collapses after the rain the gauge already reported.
+
+    Without this rule the slowest witness would have the last word, and every
+    rain-opened cycle would end up labelled as water of unknown origin.
+    """
+    tracker = _tracker()
+    tracker.note_irrigation(START, WaterSource.RAIN)
+
+    tracker.note_irrigation(START + timedelta(minutes=5), WaterSource.UNKNOWN)
+
+    assert tracker.pending_water_source is WaterSource.RAIN
+
+
+def test_two_different_waters_before_one_cycle_are_mixed():
+    """Irrigating on schedule the morning after a storm fills the profile twice."""
+    tracker = _tracker()
+    tracker.note_irrigation(START, WaterSource.RAIN)
+
+    tracker.note_irrigation(START + timedelta(hours=8), WaterSource.IRRIGATION)
+
+    assert tracker.pending_water_source is WaterSource.MIXED
+
+
+def test_the_next_wetting_starts_the_attribution_over():
+    """A mixed cycle does not poison the one after it."""
+    tracker = _tracker()
+    tracker.note_irrigation(START, WaterSource.RAIN)
+    tracker.observe(_sample(deficit_mm=0.5, minutes=240))
+
+    tracker.note_irrigation(START + timedelta(days=4), WaterSource.IRRIGATION)
+
+    assert tracker.pending_water_source is WaterSource.IRRIGATION
+
+
+def test_water_sources_are_counted_over_complete_cycles_only():
+    """The count is what tells a user why the rain comparison is still silent."""
+    tracker = _tracker()
+    tracker.note_irrigation(START, WaterSource.RAIN)
+    tracker.observe(_sample(deficit_mm=0.5, minutes=0))
+    for step in range(1, 8):
+        tracker.observe(_sample(deficit_mm=step * 3.0, minutes=step * 60))
+    tracker.note_irrigation(START + timedelta(hours=9), WaterSource.IRRIGATION)
+
+    counts = tracker.complete_cycles_by_source()
+
+    assert counts[str(WaterSource.RAIN)] == 1
+    assert counts[str(WaterSource.IRRIGATION)] == 0, "the irrigated cycle has not closed yet"
+
+
+def test_the_water_source_survives_a_restart():
+    """A label lost on restart would silently empty the rain comparison."""
+    tracker = _tracker()
+    tracker.note_irrigation(START, WaterSource.RAIN)
+    tracker.observe(_sample(deficit_mm=0.5, minutes=0))
+
+    restored = CycleTracker.from_dict(tracker.to_dict(), tracker.policy, TAW)
+
+    assert restored.cycles[-1].water_source is WaterSource.RAIN
+
+
+def test_a_cycle_stored_before_the_gauge_existed_stays_unknown():
+    """An old record is not evidence about which water filled it, and must not pretend."""
+    tracker = _tracker()
+    tracker.observe(_sample(deficit_mm=0.5, minutes=0))
+    payload = tracker.to_dict()
+    del payload["cycles"][0]["water_source"]
+
+    restored = CycleTracker.from_dict(payload, tracker.policy, TAW)
+
+    assert restored.cycles[0].water_source is WaterSource.UNKNOWN

@@ -39,18 +39,24 @@ from .const import (
     CONF_PROBE_TEMPERATURE_ENTITY,
     CONF_PROBE_TIMEOUT,
     CONF_PROBES,
+    CONF_RAIN_ENTITY,
+    CONF_RAIN_QUIET_MINUTES,
+    CONF_RAIN_SENSOR_TYPE,
     CONF_ROOT_DEPTH,
     CONF_ROOT_DEPTH_UNIT,
     CONF_SATURATION,
+    CONF_SHELTERED_FROM_RAIN,
     CONF_SOIL_TEXTURE,
     CONF_WILTING_POINT,
     DEFAULT_ROOT_DEPTH_CM,
     DEFAULT_TITLE,
     DOMAIN,
+    RAIN_SENSOR_TYPES,
+    RAIN_TYPE_EVENT,
     SOIL_DOC_URL,
 )
 from .discovery import discover_companions
-from .model import AdmissionPolicy, QualityGates, SoilTexture, deficit_to_mm
+from .model import AdmissionPolicy, QualityGates, RainPolicy, SoilTexture, deficit_to_mm
 from .probe import ProbeConfig, new_probe_id, probes_of, records_of
 from .settings import validate_soil
 
@@ -116,6 +122,45 @@ def _probe_schema(defaults: dict[str, Any]) -> vol.Schema:
                 CONF_PROBE_TEMPERATURE_ENTITY,
                 description={"suggested_value": defaults.get(CONF_PROBE_TEMPERATURE_ENTITY)},
             ): _entity_selector("sensor"),
+            vol.Required(
+                CONF_SHELTERED_FROM_RAIN,
+                default=defaults.get(CONF_SHELTERED_FROM_RAIN, False),
+            ): selector.BooleanSelector(),
+        }
+    )
+
+
+def _rain_schema(defaults: dict[str, Any]) -> vol.Schema:
+    """Form for the rain gauge: which entity, and what its number means.
+
+    Every field is optional, and leaving the entity empty is a complete answer:
+    a site without a gauge keeps the behaviour it had before one existed, with
+    rain reaching the calibration through the deficit alone.
+
+    The type has to be asked rather than guessed. Both shapes report millimetres
+    with the same device class, and reading a running total as a per-event depth
+    would credit the whole season on every poll.
+    """
+    return vol.Schema(
+        {
+            vol.Optional(
+                CONF_RAIN_ENTITY,
+                description={"suggested_value": defaults.get(CONF_RAIN_ENTITY)},
+            ): _entity_selector("sensor"),
+            vol.Required(
+                CONF_RAIN_SENSOR_TYPE,
+                default=defaults.get(CONF_RAIN_SENSOR_TYPE, RAIN_TYPE_EVENT),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[selector.SelectOptionDict(value=value, label=value) for value in RAIN_SENSOR_TYPES],
+                    translation_key="rain_sensor_type",
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            ),
+            vol.Required(
+                CONF_RAIN_QUIET_MINUTES,
+                default=defaults.get(CONF_RAIN_QUIET_MINUTES, RainPolicy().quiet_minutes),
+            ): _number(5, 360, 5, "min"),
         }
     )
 
@@ -230,6 +275,7 @@ class NeverDryCalibratorConfigFlow(ConfigFlow, domain=DOMAIN):
         """Start with an empty installation and an empty probe draft."""
         self._probes: list[ProbeConfig] = []
         self._draft: dict[str, Any] = {}
+        self._site: dict[str, Any] = {}
 
     @staticmethod
     @callback
@@ -296,10 +342,7 @@ class NeverDryCalibratorConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             if user_input.get(CONF_ADD_ANOTHER):
                 return await self.async_step_user()
-            return self.async_create_entry(
-                title=DEFAULT_TITLE,
-                data={CONF_PROBES: records_of(self._probes)},
-            )
+            return await self.async_step_rain()
 
         return self.async_show_form(
             step_id="add_another",
@@ -309,6 +352,25 @@ class NeverDryCalibratorConfigFlow(ConfigFlow, domain=DOMAIN):
                 "names": ", ".join(probe.name for probe in self._probes),
             },
         )
+
+    async def async_step_rain(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Offer the rain gauge, once, after the probes are in.
+
+        Last rather than first because it is the only question here about the
+        site instead of about a probe, and because it is the only one whose
+        honest answer may be "I do not have one". Skipping it is a complete
+        setup, not an unfinished one.
+        """
+        if user_input is not None:
+            self._site = {key: value for key, value in user_input.items() if value not in (None, "")}
+            if not self._site.get(CONF_RAIN_ENTITY):
+                self._site = {}
+            return self.async_create_entry(
+                title=DEFAULT_TITLE,
+                data={CONF_PROBES: records_of(self._probes), **self._site},
+            )
+
+        return self.async_show_form(step_id="rain", data_schema=_rain_schema({}))
 
 
 class NeverDryCalibratorOptionsFlow(OptionsFlow):
@@ -325,7 +387,7 @@ class NeverDryCalibratorOptionsFlow(OptionsFlow):
         """The one place everything is reached from."""
         return self.async_show_menu(
             step_id="init",
-            menu_options=["add_probe", "edit_probe", "remove_probe", "sampling", "gates"],
+            menu_options=["add_probe", "edit_probe", "remove_probe", "rain", "sampling", "gates"],
         )
 
     @property
@@ -501,6 +563,26 @@ class NeverDryCalibratorOptionsFlow(OptionsFlow):
         await async_remove_probe_store(self.hass, self.config_entry, probe.probe_id)
 
     # ── Tuning, shared by every probe ────────────────────────────
+
+    async def async_step_rain(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Add, change or remove the rain gauge of an installation already running.
+
+        This is the path that matters for an entry created before the gauge
+        existed: without it, using one would mean deleting the integration and
+        starting over, which costs the weeks of cycles already collected.
+
+        Clearing the entity is a real answer too, and it writes an explicit empty
+        string rather than dropping the key, because the setup data underneath
+        may still name a gauge and a missing key would let it back in.
+        """
+        if user_input is not None:
+            merged = {**self.config_entry.options, **user_input}
+            if not user_input.get(CONF_RAIN_ENTITY):
+                merged[CONF_RAIN_ENTITY] = ""
+            return self.async_create_entry(title="", data=merged)
+
+        current = {**self.config_entry.data, **self.config_entry.options}
+        return self.async_show_form(step_id="rain", data_schema=_rain_schema(current))
 
     async def async_step_sampling(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Tune which observations are allowed to become samples."""

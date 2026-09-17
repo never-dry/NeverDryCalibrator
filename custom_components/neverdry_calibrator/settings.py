@@ -29,6 +29,9 @@ from .const import (
     CONF_MIN_SAMPLES_PER_CYCLE,
     CONF_MIN_SOIL_TEMPERATURE,
     CONF_PROBE_TIMEOUT,
+    CONF_RAIN_EVENT_FRACTION,
+    CONF_RAIN_QUIET_MINUTES,
+    CONF_RAIN_SENSOR_TYPE,
     CONF_REQUIRE_PROBE_TEMPERATURE,
     CONF_ROOT_DEPTH,
     CONF_ROOT_DEPTH_UNIT,
@@ -37,8 +40,18 @@ from .const import (
     CONF_WET_ANCHOR_FRACTION,
     CONF_WILTING_POINT,
     DEFAULT_ROOT_DEPTH_CM,
+    RAIN_TYPE_ACCUMULATOR,
 )
-from .model import AdmissionPolicy, CyclePolicy, QualityGates, SoilProfile, SoilTexture, depth_to_m
+from .model import (
+    AdmissionPolicy,
+    CyclePolicy,
+    QualityGates,
+    RainPolicy,
+    RainSensorKind,
+    SoilProfile,
+    SoilTexture,
+    depth_to_m,
+)
 from .model.soil import DEFAULT_ROOT_DEPTH_M, SOIL_TEXTURE_DEFAULTS, InvalidSoilProfile
 
 #: Gap between field capacity and porosity assumed for a custom soil whose
@@ -120,6 +133,32 @@ def cycle_policy(settings: Mapping[str, Any]) -> CyclePolicy:
             "min_samples_per_cycle": settings.get(CONF_MIN_SAMPLES_PER_CYCLE, blank.min_samples_per_cycle),
         }
     )
+
+
+def rain_policy(settings: Mapping[str, Any]) -> RainPolicy:
+    """Build the rain policy, defaulting the event size to the irrigation one.
+
+    The fallback is the point of this function. A user who never opens the rain
+    options gets a shower counted exactly when a deficit drop of the same size
+    would have been counted, which is the promise the feature was asked for:
+    rain counts as an irrigation. Tuning the two apart stays possible and stays
+    a deliberate act.
+    """
+    blank = RainPolicy()
+    irrigation_fraction = settings.get(CONF_IRRIGATION_DROP_FRACTION, CyclePolicy().irrigation_drop_fraction)
+    return RainPolicy.from_dict(
+        {
+            "event_fraction": settings.get(CONF_RAIN_EVENT_FRACTION, irrigation_fraction),
+            "quiet_minutes": settings.get(CONF_RAIN_QUIET_MINUTES, blank.quiet_minutes),
+        }
+    )
+
+
+def rain_sensor_kind(settings: Mapping[str, Any]) -> RainSensorKind:
+    """Which shape of gauge the entry describes."""
+    if settings.get(CONF_RAIN_SENSOR_TYPE) == RAIN_TYPE_ACCUMULATOR:
+        return RainSensorKind.ACCUMULATOR
+    return RainSensorKind.EVENT
 
 
 def quality_gates(settings: Mapping[str, Any]) -> QualityGates:

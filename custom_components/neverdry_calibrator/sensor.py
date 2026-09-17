@@ -214,6 +214,14 @@ class CalibrationStatusSensor(CalibratorEntity, SensorEntity):
             "probe_liveness": str(data.liveness),
             "battery_percent": data.battery_percent,
             "irrigation_active": data.irrigation_active,
+            # Rain is reported even where no gauge is configured, as
+            # ``rain_watched: false``. A user whose samples are being refused
+            # needs to be able to tell "it rained" from "nothing is watching".
+            "rain_watched": data.rain_watched,
+            "raining": data.raining,
+            "rain_accumulated_mm": round(data.rain_accumulated_mm, 1),
+            "rain_event_mm": (round(data.rain_event_depth_mm, 1) if data.rain_event_depth_mm is not None else None),
+            "cycles_by_water_source": dict(data.cycles_by_source),
             "total_available_water_mm": round(session.soil.total_available_water_mm, 1),
             **(data.thresholds.to_dict() if data.thresholds else {}),
             "irrigation_threshold_mm": (

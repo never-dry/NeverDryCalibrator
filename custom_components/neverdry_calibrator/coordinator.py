@@ -10,10 +10,13 @@ Assistant runtime.
 Two responsibilities genuinely belong here because they are about Home Assistant
 rather than about soil:
 
-* **Irrigation detection.** The integration is told about water in whichever way
-  the site can afford: an explicit valve entity when one was configured, and
-  otherwise the collapse of the deficit itself, which is the only witness always
-  present. Rain is water too, and is handled by the same path on purpose.
+* **Water detection.** The integration is told about water in whichever way the
+  site can afford, by three witnesses that fail differently and are therefore
+  all kept: a valve entity, which knows nothing about the weather; a rain gauge,
+  which knows nothing about the valve; and the collapse of the deficit itself,
+  which is slower than both, cannot say what delivered the water, and is the
+  only one always present. Whichever notices first opens the drainage window,
+  and each says what it saw so the cycle can record which water filled it.
 * **Invalidation on device-side change.** If a calibration knob on the probe is
   turned, every sample collected before that moment describes a different
   instrument. The coordinator notices and tells the session to drop everything.
@@ -22,7 +25,7 @@ rather than about soil:
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
@@ -39,6 +42,7 @@ from .const import (
     CONF_IRRIGATION_ENTITY,
     CONF_MOISTURE_ENTITY,
     CONF_PROBE_TEMPERATURE_ENTITY,
+    CONF_RAIN_ENTITY,
     DOMAIN,
     ISSUE_PLACEMENT_PREFIX,
     ISSUE_THRESHOLD_TOO_LOW,
@@ -57,7 +61,9 @@ from .model import (
     PlacementSuspicion,
     PlacementVerdict,
     ProbeLiveness,
+    RainUpdate,
     RejectionReason,
+    WaterSource,
     deficit_to_mm,
     probe_liveness,
     raw_index_to_percent,
@@ -65,6 +71,7 @@ from .model import (
 )
 from .model.calibration import InvalidationReason
 from .probe import ProbeConfig
+from .settings import merged_settings, rain_sensor_kind
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -145,6 +152,13 @@ class CalibratorData:
     thresholds: DerivedThresholds | None = None
     irrigation_threshold_mm: float | None = None
     placement: PlacementVerdict | None = None
+    raining: bool = False
+    #: Depth accumulated inside the rain event in progress [mm]. Zero between
+    #: events, which is different from "no gauge": that is ``rain_watched``.
+    rain_accumulated_mm: float = 0.0
+    rain_event_depth_mm: float | None = None
+    rain_watched: bool = False
+    cycles_by_source: dict[str, int] = field(default_factory=dict)
 
     @property
     def calibration_progress(self) -> float:
@@ -261,6 +275,63 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
             return False
         return state.state in IRRIGATION_ACTIVE_STATES
 
+    @property
+    def rain_entity(self) -> str | None:
+        """The gauge this probe listens to, or ``None`` when it listens to none.
+
+        The entity is configured once for the installation and read per probe,
+        because whether rain counts is a property of the probe: one under a roof
+        is told nothing, and every probe weighs the same shower against its own
+        reservoir.
+        """
+        if self.probe.sheltered_from_rain:
+            return None
+        return merged_settings(self.entry).get(CONF_RAIN_ENTITY) or None
+
+    def _read_rain(self) -> tuple[float | None, str | None]:
+        """Read the gauge as millimetres, with the identity of the reading.
+
+        The marker is the state's ``last_updated`` rather than its value, and
+        that is the whole reason an event gauge works at all: two tips of two
+        millimetres are two events carrying the same number, while a poll that
+        lands on an untouched state is no event carrying that same number.
+        """
+        entity_id = self.rain_entity
+        if not entity_id:
+            return None, None
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+            return None, None
+        value = self._numeric(state)
+        if value is None:
+            return None, None
+        depth = deficit_to_mm(value, state.attributes.get(ATTR_UNIT_OF_MEASUREMENT))
+        marker = state.last_updated.isoformat() if state.last_updated else None
+        return depth, marker
+
+    def _detect_rain(self, now: datetime) -> RainUpdate | None:
+        """Offer the gauge to the session, and open the drainage window if rain ended.
+
+        Called before the observation is built, unlike the other two witnesses,
+        because rain is the only one whose verdict changes the observation
+        itself: whether it is raining right now decides whether this reading may
+        become a sample at all.
+        """
+        depth, marker = self._read_rain()
+        if depth is None:
+            return None
+        update = self.session.note_rain(depth, now, marker)
+        if update.wetting_ended_at is not None:
+            _LOGGER.debug(
+                "%s: %.1f mm of rain ended at %s, counted as water delivered",
+                self.probe.name,
+                update.wetting_depth_mm,
+                update.wetting_ended_at.isoformat(),
+            )
+            self._last_irrigation_end = update.wetting_ended_at
+            self._schedule_save()
+        return update
+
     def _battery_percent(self) -> float | None:
         """Battery level of the probe, when the device publishes one."""
         if not self.companions.battery:
@@ -286,6 +357,12 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
         """
         self._calibration_snapshot = snapshot_calibration_values(self.hass, self.companions.calibration_entities)
         self._threshold_entity = discover_irrigation_threshold(self.hass, self.probe.deficit_entity)
+        # The gauge's shape is told to the session here rather than at
+        # construction because this also drops the baseline, which is what a
+        # restart needs: a restored tipping-bucket state is the echo of a tip
+        # that was already counted, and a restored running total predates this
+        # boot entirely. Both are rebased instead of credited.
+        self.session.set_rain_sensor_kind(rain_sensor_kind(merged_settings(self.entry)))
         stored = self._stored_snapshot
         if stored and self._calibration_snapshot and stored != self._calibration_snapshot:
             _LOGGER.warning(
@@ -329,7 +406,7 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
         if irrigation_active:
             self._last_irrigation_end = now
             if not self._irrigation_was_active:
-                self.session.note_irrigation(now)
+                self.session.note_irrigation(now, WaterSource.IRRIGATION)
             self._irrigation_was_active = True
             return
 
@@ -348,7 +425,11 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
                 self._previous_deficit_mm,
                 deficit_mm,
             )
-            self.session.note_irrigation(now)
+            # Deliberately unnamed water. This witness sees a reservoir refill
+            # and cannot see what refilled it, and the tracker knows not to let
+            # an unnamed witness overwrite what the gauge or the valve already
+            # said about the same wetting.
+            self.session.note_irrigation(now, WaterSource.UNKNOWN)
             self._last_irrigation_end = now
         self._previous_deficit_mm = deficit_mm
 
@@ -391,6 +472,8 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
         if self._last_irrigation_end is not None:
             seconds_since_irrigation = (now - self._last_irrigation_end).total_seconds()
 
+        raining, seconds_since_rain = self.session.rain_state(now)
+
         return Observation(
             taken_at=now,
             raw_percent=raw_percent,
@@ -401,6 +484,8 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
             ambient_temperature_c=ambient_temperature,
             irrigation_active=irrigation_active,
             seconds_since_irrigation=seconds_since_irrigation,
+            rain_active=raining,
+            seconds_since_rain=seconds_since_rain,
         )
 
     def derived_thresholds(self) -> DerivedThresholds:
@@ -461,7 +546,7 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
     def _placement_placeholders(self) -> dict[str, str]:
         """Every number a placement repair might quote, formatted for a template.
 
-        One set for all five messages rather than one per message: each template
+        One set for all six messages rather than one per message: each template
         uses the two or three it needs, the unused ones cost nothing, and a
         signature that did not run leaves a dash instead of breaking the string.
         """
@@ -474,6 +559,9 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
             "slope_spread",
             "wet_anchor_drift",
             "still_raw_step",
+            "wet_anchor_gap",
+            "rain_cycles",
+            "irrigation_cycles",
         )
         placeholders = {key: f"{evidence[key]:g}" if key in evidence else "-" for key in keys}
         placeholders["probe"] = self.probe.name
@@ -486,7 +574,7 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
         Only the most severe suspicion becomes a repair, and the rest stay on the
         placement entity. The reasoning is the same one that made the irrigation
         repair worth writing: the advice has to arrive before weeks are spent,
-        and a user shown five warnings about one probe learns to close all five
+        and a user shown six warnings about one probe learns to close all six
         without reading them.
 
         This never touches the calibration. The thresholds behind these
@@ -533,6 +621,7 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
         now = dt_util.utcnow()
         self._check_device_calibration(now)
 
+        rain = self._detect_rain(now)
         observation = self.build_observation(now)
         self._detect_water(now, observation.deficit_mm, observation.irrigation_active)
 
@@ -587,6 +676,13 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
             thresholds=thresholds,
             irrigation_threshold_mm=configured_threshold,
             placement=self._placement,
+            raining=observation.rain_active,
+            rain_accumulated_mm=rain.accumulated_mm if rain else 0.0,
+            rain_event_depth_mm=(
+                self.session.rain_witness.event_depth_mm if self.session.rain_witness is not None else None
+            ),
+            rain_watched=self.rain_entity is not None,
+            cycles_by_source=self.session.tracker.complete_cycles_by_source(),
         )
 
     # ── Service entry points ─────────────────────────────────────

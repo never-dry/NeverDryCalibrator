@@ -30,6 +30,7 @@ from .const import (
     CONF_ROOT_DEPTH,
     CONF_ROOT_DEPTH_UNIT,
     CONF_SATURATION,
+    CONF_SHELTERED_FROM_RAIN,
     CONF_SOIL_TEXTURE,
     CONF_WILTING_POINT,
 )
@@ -103,6 +104,16 @@ class ProbeConfig:
     def probe_temperature_entity(self) -> str | None:
         """The temperature channel acting as liveness sentinel, usually discovered."""
         return self.settings.get(CONF_PROBE_TEMPERATURE_ENTITY)
+
+    @property
+    def sheltered_from_rain(self) -> bool:
+        """Whether rain must be kept away from this probe.
+
+        Defaults to false, which is the right default for a probe in the ground:
+        most of them are rained on, and the one under a roof is the exception its
+        owner knows about.
+        """
+        return bool(self.settings.get(CONF_SHELTERED_FROM_RAIN, False))
 
     def entity_for(self, key: str) -> str | None:
         """Entity id configured under a source key, or ``None`` when unset."""

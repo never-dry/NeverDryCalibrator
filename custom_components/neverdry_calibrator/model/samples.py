@@ -36,6 +36,7 @@ class RejectionReason(StrEnum):
     DEFICIT_STALE = "deficit_stale"
     IRRIGATION_ACTIVE = "irrigation_active"
     DRAINAGE_WINDOW = "drainage_window"
+    RAIN_WETTING = "rain_wetting"
     FROZEN_SOIL = "frozen_soil"
     SAMPLED_TOO_SOON = "sampled_too_soon"
     MISSING_PROBE_TEMPERATURE = "missing_probe_temperature"
@@ -77,6 +78,10 @@ class Observation:
     ambient_temperature_c: float | None = None
     irrigation_active: bool = False
     seconds_since_irrigation: float | None = None
+    #: Rain is falling now, or stopped too recently to call the event over.
+    rain_active: bool = False
+    #: Time since the last millimetre the gauge credited, of any size.
+    seconds_since_rain: float | None = None
 
     @property
     def soil_temperature_c(self) -> float | None:
@@ -275,11 +280,22 @@ def evaluate(
 
     if observation.irrigation_active:
         return Admission.refuse(RejectionReason.IRRIGATION_ACTIVE)
+    if observation.rain_active:
+        return Admission.refuse(RejectionReason.RAIN_WETTING)
     if (
         observation.seconds_since_irrigation is not None
         and observation.seconds_since_irrigation < policy.drainage_seconds
     ):
         return Admission.refuse(RejectionReason.DRAINAGE_WINDOW)
+    # Rain too small to have counted as a wetting still wet the soil, and the
+    # water it delivered redistributes on the same clock as any other water, so
+    # it is refused for the same window. The reason is its own rather than
+    # ``DRAINAGE_WINDOW`` because the two say different things to a user reading
+    # the diagnostic: one is the calibration working, the other is the weather
+    # eating the campaign. A wetting-sized event is caught by the check above
+    # instead, since the witness that saw it also opened the drainage window.
+    if observation.seconds_since_rain is not None and observation.seconds_since_rain < policy.drainage_seconds:
+        return Admission.refuse(RejectionReason.RAIN_WETTING)
 
     soil_temperature = observation.soil_temperature_c
     if soil_temperature is not None and soil_temperature < policy.min_soil_temperature_c:

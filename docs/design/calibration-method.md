@@ -99,6 +99,14 @@ it is configurable for sites that have reasons to trade evidence for speed. Note
 that five complete cycles means six irrigations: a cycle is only complete once
 the next irrigation closes it.
 
+**Rain counts.** A storm that refills the profile is a wetting like any other,
+and with a rain gauge configured it closes the cycle it fell on and opens the
+next one, exactly as a valve would. This is worth saying plainly because it is
+free evidence: in a wet fortnight the campaign keeps advancing instead of waiting
+for an irrigation that the water balance has no reason to call for. Each cycle
+records which water opened it, which is what makes the rain comparison of section
+9 possible.
+
 ## 5. Which samples are allowed in
 
 Every admission rule below removes a specific way of learning something false.
@@ -106,6 +114,7 @@ Every admission rule below removes a specific way of learning something false.
 | Rule | What it removes |
 |---|---|
 | No sample while irrigating | The reading during delivery is about water in transit near the electrode. |
+| No sample while it rains, or for the drainage window after rain too small to count as a wetting | Rain the reservoir barely notices still wets the centimetres the probe reads. Without a gauge those readings enter the fit as ordinary dry-down points and bias it wet, silently. |
 | No sample for the drainage window (3 h default) | The wetting front redistributes for hours. A reading taken at minute twenty describes a profile that will not exist at hour three. |
 | Deficit must be fresh (30 min default) | A stale deficit pairs today's probe reading with yesterday's soil. |
 | Probe temperature must be fresh (2 h default) | The liveness sentinel. A flat battery keeps publishing the last moisture value forever; the temperature channel is what stops arriving. |
@@ -195,7 +204,7 @@ pushed in thirty centimetres from an emitter instead of ten may sit outside the
 wetted soil entirely, and nothing about its readings looks broken. It publishes a
 number all day.
 
-The same cycles that feed the estimator can be read for this, and five signatures
+The same cycles that feed the estimator can be read for this, and six signatures
 come out of them.
 
 * **The probe does not move.** The reservoir went from full to nearly empty and
@@ -221,18 +230,31 @@ come out of them.
 * **The index jumps while the soil stands still.** Between two readings taken
   minutes apart at an unchanged deficit, soil water does not move. An air gap
   around the shaft does, and so does a failing probe.
+* **The probe fills up when it rains and not when the zone is watered.** This one
+  needs a rain gauge, and it is the only signature that answers the question the
+  other five can only circle around. Rain falls on every square centimetre; a
+  dripper wets a bulb around itself. If field capacity reads high after a storm
+  and low after an irrigation, the soil is the same in both cases, and what
+  differs is whether the water ever reached the probe. The comparison is fair
+  because a cycle only opens once the water balance says the profile is nearly
+  full, so both readings describe the same soil state. It runs only with at
+  least two cycles of each kind, and it is one-sided: a dripper that wets more
+  than a shower is a dripper doing its job.
 
-Two things this cannot do, which matter more than the five it can.
+Two things this cannot do, which matter more than the six it can.
 
 It cannot tell a badly placed probe from a wrong water balance. Both produce the
 same disagreement between the two series, and no amount of data separates them by
 magnitude alone. What separates them is shape: a water balance is smooth by
 construction, so a jump at constant deficit, a lag or a hysteresis loop can only
 have come from the probe. Every signature above is one of those, or a comparison
-of cycles against each other rather than against the model. Two probes sharing
-one deficit source would settle it outright, since a disagreement common to both
-is the model's and one peculiar to either is that probe's. That comparison is not
-built yet.
+of cycles against each other rather than against the model. The rain comparison
+is the partial exception and the reason it was worth building: rain and
+irrigation are read against the *same* water balance, so a model error affects
+both alike and cancels, while a probe outside the wetted bulb does not. Two
+probes sharing one deficit source would settle the rest outright, since a
+disagreement common to both is the model's and one peculiar to either is that
+probe's. That comparison is not built yet.
 
 And it cannot give you a probability. Five cycles are five observations. That is
 enough to say "this number is out of range, here it is", and not enough to say
@@ -242,10 +264,10 @@ which does not exist. So the integration names the suspicion, shows the number
 that raised it, and leaves the judgement where the evidence actually is, with the
 person who can go and look.
 
-For the same reason none of this blocks a calibration. Four of the five
+For the same reason none of this blocks a calibration. All but one of these
 thresholds are argued rather than measured. An unmeasured threshold is allowed to
 advise you and not to overrule you: the gates in section 7 decide what gets
-published, these five only describe what they noticed.
+published, these six only describe what they noticed.
 
 ## 10. What remains wrong, and by how much
 

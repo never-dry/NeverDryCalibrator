@@ -68,8 +68,10 @@ Immutable, no identity, compared by value.
 | `AdmissionPolicy` | `samples.py` | freshness, rate, drainage and frost thresholds | The admission contract, in one readable place. |
 | `Sample` | `samples.py` | `R`, `D`, `theta_ref`, temperatures, cycle index, soil fingerprint | That its `theta_ref` was derived through the reservoir named by its fingerprint. |
 | `CyclePolicy` | `cycles.py` | irrigation, anchor and span thresholds as fractions of TAW | That thresholds scale with the reservoir instead of being absolute millimetres. |
+| `RainPolicy` | `rain.py` | wetting depth as a fraction of TAW, and the silence that ends an event | Same scaling rule, for the same reason. Defaults to the irrigation drop fraction, so rain counts exactly when the same depth of irrigation would. |
+| `RainUpdate` | `rain.py` | millimetres credited, event depth, whether it is raining, when a wetting ended | That a wetting is reported once, at the instant of the last drop rather than of the poll that noticed. |
 | `QualityGates` | `calibration.py` | minimum cycles, samples, span, R squared, residual | What "earned" means. |
-| `PlacementPolicy` | `placement.py` | the five placement thresholds | What "worth reading" means. Advisory by construction: nothing consults it before publishing. |
+| `PlacementPolicy` | `placement.py` | the six placement thresholds | What "worth reading" means. Advisory by construction: nothing consults it before publishing. |
 | `PlacementVerdict` | `placement.py` | confidence, every suspicion, the numbers behind them | That a suspicion is never published without the figure that raised it. |
 | `LineFit`, `TemperatureAwareFit` | `estimator.py` | slope, intercept, diagnostics, thermal term | Nothing beyond arithmetic. |
 | `CalibrationFit` | `calibration.py` | the published line, its provenance, its range and quality | That a line carries the range it was tested over and the reservoir it was fitted against. |
@@ -82,7 +84,8 @@ Have identity and change over time.
 | Entity | Identity | Lifecycle |
 |---|---|---|
 | `DryDownCycle` | `index`, assigned in order | Opens on a wet anchor, absorbs samples, closes on the next irrigation. Once closed it never reopens. |
-| `CycleTracker` | one per session | Three-state machine over the irrigate/drain/dry loop. |
+| `CycleTracker` | one per session | Three-state machine over the irrigate/drain/dry loop. Records which water is pending, and stamps it on the cycle that opens next. |
+| `RainWitness` | one per probe | Turns gauge readings into credited millimetres and wetting events. One per probe rather than per site: the threshold is a share of *this* probe's reservoir. Holds no clock; every instant is passed in. |
 
 ### 3.3 Aggregate root
 
@@ -93,6 +96,8 @@ what makes the invariants below enforceable rather than hoped for.
 ```mermaid
 graph TD
   OBS[Observation] -->|admission rules| SES[CalibrationSession]
+  RAIN[rain gauge reading] -->|credited mm| WIT[RainWitness]
+  WIT -->|wetting event| SES
   SES --> BUF[SampleBuffer]
   SES --> TRK[CycleTracker]
   TRK --> CYC[DryDownCycle 1..n]
@@ -121,6 +126,8 @@ covered by at least one test, named in the right-hand column.
 | I8 | A stored fit whose soil fingerprint differs from the configured soil is not restored. | A restart must not resurrect a statement about a reservoir that no longer exists. | `test_a_stored_fit_from_another_soil_is_not_restored` |
 | I9 | An unreadable store costs history, never the integration. | Weeks of samples are valuable; an instance that will not start is worse. | `test_an_unreadable_store_costs_history_not_the_integration` |
 | I10 | Every rejected observation carries a named reason, and reasons are counted. | A probe that never calibrates must be able to say why. | `test_each_failure_mode_has_its_own_named_reason` |
+| I11 | A gauge reading is credited only as a positive increment, and the first reading after a restart is never credited. | A counter that falls is a reset, and a restored state is water already counted. Both would otherwise invent rain. | `test_a_counter_that_falls_is_a_reset_and_not_negative_rain`, `test_the_first_reading_after_a_restart_credits_nothing` |
+| I12 | A cycle's water source is set when the cycle opens and never inferred afterwards; cycles stored before the gauge existed stay `UNKNOWN`. | The rain comparison is worth only as much as the certainty that the two groups are what they claim. | `test_a_cycle_stored_before_the_gauge_existed_stays_unknown` |
 
 ## 5. State machines
 
@@ -128,10 +135,17 @@ covered by at least one test, named in the right-hand column.
 
 ```
 WAITING_FOR_WATER --(sample with D <= wet anchor threshold)--> DRYING
-DRYING            --(irrigation observed)-------------------> DRAINING
+DRYING            --(water observed)------------------------> DRAINING
 DRAINING          --(sample with D <= wet anchor threshold)--> DRYING
 any               --(soil changed or manual reset)----------> WAITING_FOR_WATER
 ```
+
+"Water observed" is any of three witnesses: the irrigation entity switching on,
+a rain event reaching the wetting depth and then going quiet, or the deficit
+collapsing by more than the irrigation drop fraction. Each names the water it
+saw, and while draining an unnamed witness never overwrites a named one; two
+different names make the pending water `MIXED`, which is evidence for the
+calibration and deliberately no evidence for the wetted-bulb comparison.
 
 Samples arriving in `WAITING_FOR_WATER` or `DRAINING` are not filed under any
 cycle and are discarded from the fit. This is deliberate: before the first
@@ -159,7 +173,8 @@ was a change to four files and to none of the domain.
 |---|---|---|
 | Holding the probe list, one device per probe | Home Assistant (`probe.py`, `entity.py`) | Configuration and presentation, not physics. |
 | Reading states, converting units, computing ages | Home Assistant (`coordinator.py`) | Only the host knows what a state is. |
-| Deciding that water reached the soil | Home Assistant | Two witnesses exist, a valve entity and the deficit itself, and both are host concerns. The *threshold* is domain. |
+| Reading the rain gauge, and knowing which shape it has | Home Assistant (`coordinator.py`, `settings.py`) | Which entity, which unit, and the identity of a reading are all host facts. How many millimetres make a wetting is domain. |
+| Deciding that water reached the soil | Home Assistant | Three witnesses exist, a valve entity, a rain gauge and the deficit itself, and all three are host concerns. The *thresholds* are domain. |
 | Deciding whether an observation is usable | Domain | It is a statement about the physics, not about entities. |
 | Deciding what counts as a cycle | Domain | Same. |
 | Fitting and gating | Domain | Same. |
