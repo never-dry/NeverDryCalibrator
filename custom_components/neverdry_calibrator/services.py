@@ -57,12 +57,12 @@ def _resolve(hass: HomeAssistant, call: ServiceCall, *, required: bool) -> list[
     """
     everything = all_coordinators(hass)
     if not everything:
-        raise HomeAssistantError("no NeverDry Calibrator probe is configured")
+        raise HomeAssistantError(translation_domain=DOMAIN, translation_key="no_probe_configured")
 
     wanted = call.data.get(ATTR_PROBE)
     if wanted is None:
         if required:
-            raise HomeAssistantError("this service needs a probe name; it will not act on every probe at once")
+            raise HomeAssistantError(translation_domain=DOMAIN, translation_key="probe_name_required")
         return everything
 
     needle = str(wanted).strip().lower()
@@ -73,7 +73,11 @@ def _resolve(hass: HomeAssistant, call: ServiceCall, *, required: bool) -> list[
     ]
     if not matches:
         known = ", ".join(sorted(coordinator.probe.name for coordinator in everything))
-        raise HomeAssistantError(f"no probe named {wanted}. Configured probes: {known}")
+        raise HomeAssistantError(
+            translation_domain=DOMAIN,
+            translation_key="unknown_probe",
+            translation_placeholders={"wanted": str(wanted), "known": known},
+        )
     return matches
 
 
@@ -103,19 +107,21 @@ def async_register_services(hass: HomeAssistant) -> None:
         """Record the current reading of one probe as a field capacity anchor."""
         for coordinator in _resolve(hass, call, required=True):
             if not await coordinator.async_mark_field_capacity():
-                raise HomeAssistantError(f"{coordinator.probe.name} is not reporting a usable value right now")
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN,
+                    translation_key="probe_not_reporting",
+                    translation_placeholders={"name": coordinator.probe.name},
+                )
 
     async def _apply_device_offset(call: ServiceCall) -> None:
         """Write an offset into one probe's own calibration entity, if allowed."""
         for coordinator in _resolve(hass, call, required=True):
             if not coordinator.entry.options.get(CONF_ALLOW_DEVICE_WRITEBACK, False):
                 raise HomeAssistantError(
-                    "writing to the device is disabled; enable it in the integration options first"
+                    translation_domain=DOMAIN,
+                    translation_key="device_writeback_disabled",
                 )
-            try:
-                applied = await coordinator.async_apply_device_offset(call.data.get(ATTR_OFFSET))
-            except ValueError as err:
-                raise HomeAssistantError(str(err)) from err
+            applied = await coordinator.async_apply_device_offset(call.data.get(ATTR_OFFSET))
             _LOGGER.warning(
                 "%s: wrote offset %.2f to the probe; the collected samples were dropped",
                 coordinator.probe.name,

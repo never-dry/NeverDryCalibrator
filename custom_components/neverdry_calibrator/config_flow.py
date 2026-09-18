@@ -53,6 +53,7 @@ from .const import (
     DOMAIN,
     RAIN_SENSOR_TYPES,
     RAIN_TYPE_EVENT,
+    ROOT_DEPTH_UNITS,
     SOIL_DOC_URL,
 )
 from .discovery import discover_companions
@@ -72,13 +73,15 @@ CONF_SELECTED_PROBE = "selected_probe"
 #: Field carrying the confirmation of a removal.
 CONF_CONFIRM_REMOVAL = "confirm_removal"
 
-SOIL_TEXTURE_LABELS: dict[str, str] = {
-    SoilTexture.AUTO: "Automatic (a middle soil)",
-    SoilTexture.SANDY: "Sandy / light, drains fast",
-    SoilTexture.LOAM: "Loam / medium",
-    SoilTexture.CLAY: "Clay / heavy, holds water",
-    SoilTexture.CUSTOM: "Custom (set the values below)",
-}
+#: Dropdowns whose option labels are resolved from ``selector.<key>.options`` in
+#: the translation files, one entry per language.
+#:
+#: None of them passes a label inline. An inline label wins over the translation
+#: in the frontend, so a single hard-coded string would pin the dropdown to
+#: English while the rest of the form follows the user's language.
+SELECTOR_SOIL_TEXTURE = "soil_texture"
+SELECTOR_ROOT_DEPTH_UNIT = "root_depth_unit"
+SELECTOR_RAIN_SENSOR_TYPE = "rain_sensor_type"
 
 
 def _entity_selector(domain: str | list[str]) -> selector.EntitySelector:
@@ -152,8 +155,8 @@ def _rain_schema(defaults: dict[str, Any]) -> vol.Schema:
                 default=defaults.get(CONF_RAIN_SENSOR_TYPE, RAIN_TYPE_EVENT),
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=[selector.SelectOptionDict(value=value, label=value) for value in RAIN_SENSOR_TYPES],
-                    translation_key="rain_sensor_type",
+                    options=list(RAIN_SENSOR_TYPES),
+                    translation_key=SELECTOR_RAIN_SENSOR_TYPE,
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
@@ -172,10 +175,8 @@ def _soil_schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Required(CONF_SOIL_TEXTURE, default=defaults.get(CONF_SOIL_TEXTURE, SoilTexture.AUTO)): (
                 selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=[
-                            selector.SelectOptionDict(value=str(value), label=label)
-                            for value, label in SOIL_TEXTURE_LABELS.items()
-                        ],
+                        options=[str(texture) for texture in SoilTexture],
+                        translation_key=SELECTOR_SOIL_TEXTURE,
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 )
@@ -186,10 +187,8 @@ def _soil_schema(defaults: dict[str, Any]) -> vol.Schema:
             vol.Required(CONF_ROOT_DEPTH_UNIT, default=defaults.get(CONF_ROOT_DEPTH_UNIT, "cm")): (
                 selector.SelectSelector(
                     selector.SelectSelectorConfig(
-                        options=[
-                            selector.SelectOptionDict(value="cm", label="centimetres"),
-                            selector.SelectOptionDict(value="in", label="inches"),
-                        ],
+                        options=list(ROOT_DEPTH_UNITS),
+                        translation_key=SELECTOR_ROOT_DEPTH_UNIT,
                         mode=selector.SelectSelectorMode.DROPDOWN,
                     )
                 )

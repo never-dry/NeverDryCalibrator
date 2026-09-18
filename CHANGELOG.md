@@ -4,6 +4,48 @@ All notable changes to this integration are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.3.1 - 2026-09-18
+
+A repair to what the integration says, not to what it does. It already spoke
+English and Italian, and the two files had been in step since the first release,
+which is exactly why this went unseen: every check that looked at the
+translations came back clean, and none of them could see the text that never
+reached a translation file at all.
+
+The warning of 0.1.0 and 0.3.0 still stands: the error budget is argued from soil
+physics and not yet measured against a probe in the ground, and the placement
+thresholds are argued rather than measured.
+
+### Fixed
+
+- **Nothing the user reads is written in Python any more.** The integration
+  already shipped in English and Italian, but three dropdowns and nine error
+  messages were spelled out in the code and never reached a translation file, so
+  an Italian install met them in English. The soil texture menu, the root depth
+  unit and the rain gauge type now take their labels from the translations like
+  everything else, and every refusal a service can answer with is a translated
+  sentence rather than a literal. The rain gauge dropdown is the plainest case:
+  it already carried a translation key and both translations, and an inline
+  label passed next to them quietly won, so the menu offered `event` and
+  `accumulator` in every language.
+- `services.yaml` no longer repeats the name and description of each service and
+  field. Home Assistant reads those from the translations, which means the copy
+  in the YAML was a second English original that could drift from the translated
+  one with nothing to catch it. The file now carries only what has no language:
+  which fields exist, whether they are required, their selector and an example.
+- `pyproject.toml` declared version 0.1.0 while the integration was at 0.3.0.
+  The release pipeline reads the manifest and was never affected.
+
+### Added
+
+- Four guards against the ways a translation goes missing without a sound, and a
+  fifth widened from English to every language. A value a dropdown can show with
+  no label, an error raised with no message, an entity whose name is absent,
+  translatable text creeping back into `services.yaml`, and a referenced
+  selector key missing from any of the languages. They parse the modules rather
+  than importing them, so they run in the environment that has no Home
+  Assistant.
+
 ## 0.3.0 - 2026-09-17
 
 Two features, and the second exists because the first made it possible. The

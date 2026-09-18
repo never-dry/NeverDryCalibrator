@@ -1,69 +1,43 @@
+# The name and description of every service and field live in strings.json and in
+# translations/, never here. Home Assistant reads them from the translation of the
+# user's language, so a copy in this file would be a second English original: it
+# can drift from the translated one, and nothing would catch the drift.
+#
+# What stays here is what has no language: which fields exist, whether they are
+# required, their selector and an example value.
+
 calibrate_now:
-  name: Calibrate now
-  description: >-
-    Refit the calibration immediately from the cycles collected so far and report
-    whether it passed its quality gates. Does not lower the gates: a calibration
-    that lacks evidence stays unpublished.
   fields:
     probe:
-      name: Probe
-      description: Name of the probe. Leave empty to refit every configured probe.
       required: false
       example: "Ortensia"
       selector:
         text:
 
 reset_calibration:
-  name: Reset calibration
-  description: >-
-    Throw away every sample, cycle and fit of one probe and start collecting from
-    scratch. Use after moving the probe to another spot.
   fields:
     probe:
-      name: Probe
-      description: >-
-        Name of the probe to reset. Required: a reset throws away weeks of
-        collected cycles, so it never acts on every probe at once.
       required: true
       example: "Ortensia"
       selector:
         text:
 
 mark_field_capacity:
-  name: Mark field capacity
-  description: >-
-    Declare that the soil around one probe is at field capacity right now,
-    recording its current reading as a wet anchor. Call it after watering
-    thoroughly and waiting for the soil to drain.
   fields:
     probe:
-      name: Probe
-      description: Name of the probe to anchor.
       required: true
       example: "Ortensia"
       selector:
         text:
 
 apply_device_offset:
-  name: Apply offset to the probe
-  description: >-
-    Write a calibration offset into the probe's own calibration entity. Requires
-    the write-back option to be enabled. Every collected sample of that probe is
-    dropped afterwards, because it no longer reports what those samples describe.
   fields:
     probe:
-      name: Probe
-      description: Name of the probe to write to.
       required: true
       example: "Ortensia"
       selector:
         text:
     offset:
-      name: Offset
-      description: >-
-        Offset to write. Leave empty to use the value the calibration suggests,
-        which is refused when the fitted gain is too far from the device scale
-        for an offset to help.
       required: false
       selector:
         number:
@@ -73,14 +47,8 @@ apply_device_offset:
           mode: box
 
 export_samples:
-  name: Export samples
-  description: >-
-    Return every sample, cycle and fit behind the current calibrations, for
-    inspection or for a bug report.
   fields:
     probe:
-      name: Probe
-      description: Name of the probe. Leave empty to export every configured probe.
       required: false
       example: "Ortensia"
       selector:

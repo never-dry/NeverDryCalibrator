@@ -279,27 +279,27 @@
   "services": {
     "calibrate_now": {
       "name": "Calibrate now",
-      "description": "Refit the calibration immediately from the cycles collected so far.",
+      "description": "Refit the calibration immediately from the cycles collected so far and report whether it passed its quality gates. Does not lower the gates: a calibration that lacks evidence stays unpublished.",
       "fields": {
         "probe": {
           "name": "Probe",
-          "description": "Name of the probe. Leave empty to refit every probe."
+          "description": "Name of the probe. Leave empty to refit every configured probe."
         }
       }
     },
     "reset_calibration": {
       "name": "Reset calibration",
-      "description": "Throw away every sample, cycle and fit of one probe and start collecting from scratch.",
+      "description": "Throw away every sample, cycle and fit of one probe and start collecting from scratch. Use after moving the probe to another spot.",
       "fields": {
         "probe": {
           "name": "Probe",
-          "description": "Name of the probe to reset. Required: this cannot act on every probe at once."
+          "description": "Name of the probe to reset. Required: a reset throws away weeks of collected cycles, so it never acts on every probe at once."
         }
       }
     },
     "mark_field_capacity": {
       "name": "Mark field capacity",
-      "description": "Record the current reading of one probe as a field capacity anchor.",
+      "description": "Declare that the soil around one probe is at field capacity right now, recording its current reading as a wet anchor. Call it after watering thoroughly and waiting for the soil to drain.",
       "fields": {
         "probe": {
           "name": "Probe",
@@ -309,7 +309,7 @@
     },
     "apply_device_offset": {
       "name": "Apply offset to the probe",
-      "description": "Write a calibration offset into the probe's own calibration entity.",
+      "description": "Write a calibration offset into the probe's own calibration entity. Requires the write-back option to be enabled. Every collected sample of that probe is dropped afterwards, because it no longer reports what those samples describe.",
       "fields": {
         "probe": {
           "name": "Probe",
@@ -317,17 +317,17 @@
         },
         "offset": {
           "name": "Offset",
-          "description": "Offset to write. Leave empty to use the suggested value."
+          "description": "Offset to write. Leave empty to use the value the calibration suggests, which is refused when the fitted gain is too far from the device scale for an offset to help."
         }
       }
     },
     "export_samples": {
       "name": "Export samples",
-      "description": "Return every sample, cycle and fit behind the current calibrations.",
+      "description": "Return every sample, cycle and fit behind the current calibrations, for inspection or for a bug report.",
       "fields": {
         "probe": {
           "name": "Probe",
-          "description": "Name of the probe. Leave empty to export every probe."
+          "description": "Name of the probe. Leave empty to export every configured probe."
         }
       }
     }
@@ -362,11 +362,55 @@
       "description": "Across {rain_cycles} cycles opened by rain and {irrigation_cycles} opened by the irrigation, field capacity read {wet_anchor_gap} index points higher after rain than after watering. Both numbers describe the same soil state: a cycle only opens once the water balance says the profile is nearly full, so what differs is the probe's answer, not the water.\n\nRain falls on every square centimetre. A dripper wets a bulb around itself, and a probe outside that bulb is watered only by the weather. This is the one failure a single probe cannot diagnose on its own, and the rain gauge is what makes it visible.\n\nMove {probe} to about half the wetted radius from an emitter: 8 to 12 cm on sand, 12 to 20 cm on loam, 20 to 30 cm on clay. Never directly under the emitter. Then reset its calibration: the samples collected so far describe the old position."
     }
   },
+  "exceptions": {
+    "no_probe_configured": {
+      "message": "No NeverDry Calibrator probe is configured."
+    },
+    "probe_name_required": {
+      "message": "This service needs a probe name: it will not act on every probe at once."
+    },
+    "unknown_probe": {
+      "message": "No probe named {wanted}. Configured probes: {known}."
+    },
+    "probe_not_reporting": {
+      "message": "{name} is not reporting a usable value right now."
+    },
+    "device_writeback_disabled": {
+      "message": "Writing to the device is disabled. Enable it in the integration options first."
+    },
+    "no_device_calibration_entity": {
+      "message": "No device-side moisture calibration entity was discovered on this probe."
+    },
+    "no_calibration_for_offset": {
+      "message": "No calibration is available to derive an offset from."
+    },
+    "gain_deviation_too_large": {
+      "message": "The fitted gain differs from the device scale by {deviation}. An offset cannot correct a slope: pass one explicitly to override."
+    },
+    "invalid_soil_profile": {
+      "message": "Probe {name} has an invalid soil configuration: {error}"
+    }
+  },
   "selector": {
     "rain_sensor_type": {
       "options": {
         "event": "Per event (tipping bucket)",
         "accumulator": "Running total (daily, rolling or lifetime)"
+      }
+    },
+    "soil_texture": {
+      "options": {
+        "auto": "Automatic (a middle soil)",
+        "sandy": "Sandy / light, drains fast",
+        "loam": "Loam / medium",
+        "clay": "Clay / heavy, holds water",
+        "custom": "Custom (set the values below)"
+      }
+    },
+    "root_depth_unit": {
+      "options": {
+        "cm": "Centimetres",
+        "in": "Inches"
       }
     }
   }
