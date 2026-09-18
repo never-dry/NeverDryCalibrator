@@ -1,6 +1,6 @@
 [project]
 name = "neverdry-calibrator"
-version = "0.1.0"
+version = "0.3.0"
 description = "Calibrate cheap soil moisture probes against a scientific water deficit model in Home Assistant"
 readme = "README.md"
 license = { text = "MIT" }

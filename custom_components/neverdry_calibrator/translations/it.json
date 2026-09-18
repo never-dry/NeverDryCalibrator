@@ -279,27 +279,27 @@
   "services": {
     "calibrate_now": {
       "name": "Calibra adesso",
-      "description": "Ricalcola subito la calibrazione sui cicli raccolti finora.",
+      "description": "Ricalcola subito la calibrazione sui cicli raccolti finora e riporta se ha superato i controlli di qualita'. Non abbassa i controlli: una calibrazione senza prove sufficienti resta non pubblicata.",
       "fields": {
         "probe": {
           "name": "Sonda",
-          "description": "Nome della sonda. Lascia vuoto per ricalcolare tutte le sonde."
+          "description": "Nome della sonda. Lascia vuoto per ricalcolare tutte le sonde configurate."
         }
       }
     },
     "reset_calibration": {
       "name": "Azzera calibrazione",
-      "description": "Butta via campioni, cicli e fit di una sonda e ricomincia la raccolta da zero.",
+      "description": "Butta via campioni, cicli e fit di una sonda e ricomincia la raccolta da zero. Da usare dopo aver spostato la sonda in un altro punto.",
       "fields": {
         "probe": {
           "name": "Sonda",
-          "description": "Nome della sonda da azzerare. Obbligatorio: questo servizio non agisce su tutte le sonde insieme."
+          "description": "Nome della sonda da azzerare. Obbligatorio: un azzeramento butta via settimane di cicli raccolti, quindi non agisce mai su tutte le sonde insieme."
         }
       }
     },
     "mark_field_capacity": {
       "name": "Segna capacita' di campo",
-      "description": "Registra la lettura corrente di una sonda come ancora di capacita' di campo.",
+      "description": "Dichiara che il terreno intorno a una sonda e' in capacita' di campo adesso, registrando la lettura corrente come ancora umida. Da chiamare dopo un'irrigazione abbondante e dopo aver atteso il drenaggio.",
       "fields": {
         "probe": {
           "name": "Sonda",
@@ -309,7 +309,7 @@
     },
     "apply_device_offset": {
       "name": "Applica offset alla sonda",
-      "description": "Scrive un offset di calibrazione nell'entita' di calibrazione della sonda.",
+      "description": "Scrive un offset di calibrazione nell'entita' di calibrazione della sonda stessa. Richiede che l'opzione di scrittura sul dispositivo sia attiva. Dopo la scrittura tutti i campioni raccolti per quella sonda vengono scartati, perche' la sonda non riporta piu' cio' che quei campioni descrivono.",
       "fields": {
         "probe": {
           "name": "Sonda",
@@ -317,17 +317,17 @@
         },
         "offset": {
           "name": "Offset",
-          "description": "Offset da scrivere. Lascia vuoto per usare il valore suggerito."
+          "description": "Offset da scrivere. Lascia vuoto per usare il valore suggerito dalla calibrazione, che viene rifiutato quando il guadagno stimato e' troppo lontano dalla scala del dispositivo perche' un offset possa servire."
         }
       }
     },
     "export_samples": {
       "name": "Esporta campioni",
-      "description": "Restituisce tutti i campioni, i cicli e i fit dietro le calibrazioni correnti.",
+      "description": "Restituisce tutti i campioni, i cicli e i fit dietro le calibrazioni correnti, per un'ispezione o per una segnalazione di bug.",
       "fields": {
         "probe": {
           "name": "Sonda",
-          "description": "Nome della sonda. Lascia vuoto per esportare tutte le sonde."
+          "description": "Nome della sonda. Lascia vuoto per esportare tutte le sonde configurate."
         }
       }
     }
@@ -362,11 +362,55 @@
       "description": "Su {rain_cycles} cicli aperti dalla pioggia e {irrigation_cycles} aperti dall'irrigazione, la capacita' di campo ha letto {wet_anchor_gap} punti indice piu' in alto dopo la pioggia che dopo l'irrigazione. I due numeri descrivono lo stesso stato del terreno: un ciclo si apre solo quando il bilancio idrico dice che il profilo e' quasi pieno, quindi a cambiare e' la risposta della sonda, non l'acqua.\n\nLa pioggia cade su ogni centimetro quadrato. Un gocciolatoio bagna un bulbo intorno a se', e una sonda fuori da quel bulbo viene irrigata solo dal meteo. E' l'unico guasto che una sonda da sola non puo' diagnosticare, e il pluviometro e' cio' che lo rende visibile.\n\nSposta {probe} a circa meta' del raggio bagnato da un gocciolatoio: 8-12 cm su sabbia, 12-20 cm su medio impasto, 20-30 cm su argilla. Mai esattamente sotto il gocciolatoio. Poi azzera la calibrazione: i campioni raccolti finora descrivono la vecchia posizione."
     }
   },
+  "exceptions": {
+    "no_probe_configured": {
+      "message": "Nessuna sonda NeverDry Calibrator e' configurata."
+    },
+    "probe_name_required": {
+      "message": "Questo servizio richiede il nome di una sonda: non agisce su tutte le sonde insieme."
+    },
+    "unknown_probe": {
+      "message": "Nessuna sonda si chiama {wanted}. Sonde configurate: {known}."
+    },
+    "probe_not_reporting": {
+      "message": "{name} non sta pubblicando un valore utilizzabile in questo momento."
+    },
+    "device_writeback_disabled": {
+      "message": "La scrittura sul dispositivo e' disattivata. Attivala nelle opzioni dell'integrazione prima di riprovare."
+    },
+    "no_device_calibration_entity": {
+      "message": "Su questa sonda non e' stata trovata nessuna entita' di calibrazione del dispositivo."
+    },
+    "no_calibration_for_offset": {
+      "message": "Non c'e' nessuna calibrazione da cui ricavare un offset."
+    },
+    "gain_deviation_too_large": {
+      "message": "Il guadagno stimato si discosta dalla scala del dispositivo del {deviation}. Un offset non puo' correggere una pendenza: passane uno esplicito per forzare la scrittura."
+    },
+    "invalid_soil_profile": {
+      "message": "La sonda {name} ha una configurazione del suolo non valida: {error}"
+    }
+  },
   "selector": {
     "rain_sensor_type": {
       "options": {
         "event": "Per evento (pluviometro a bascula)",
         "accumulator": "Totale progressivo (giornaliero, mobile o da installazione)"
+      }
+    },
+    "soil_texture": {
+      "options": {
+        "auto": "Automatico (terreno medio)",
+        "sandy": "Sabbioso / leggero, drena in fretta",
+        "loam": "Franco / medio impasto",
+        "clay": "Argilloso / pesante, trattiene l'acqua",
+        "custom": "Personalizzato (imposta i valori qui sotto)"
+      }
+    },
+    "root_depth_unit": {
+      "options": {
+        "cm": "Centimetri",
+        "in": "Pollici"
       }
     }
   }

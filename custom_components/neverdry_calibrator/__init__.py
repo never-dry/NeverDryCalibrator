@@ -59,7 +59,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             runtime[probe.probe_id] = await _build_coordinator(hass, entry, probe)
         except InvalidSoilProfile as err:
-            raise HomeAssistantError(f"probe {probe.name} has an invalid soil configuration: {err}") from err
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="invalid_soil_profile",
+                translation_placeholders={"name": probe.name, "error": str(err)},
+            ) from err
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = runtime
 

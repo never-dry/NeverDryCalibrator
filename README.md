@@ -106,6 +106,11 @@ installation itself.
 | `binary_sensor.<probe>_probe_online` | The temperature sentinel: a flat battery keeps publishing the last moisture value forever, but the temperature stops arriving. |
 | `binary_sensor.<probe>_calibration_problem` | On when the calibration is drifting, invalidated, or the probe is offline. |
 
+Every word the integration shows is translated: the setup forms, the names of
+those entities, the states they publish, the repairs they raise and the refusals
+a service can answer with. English is the original, Italian ships alongside it,
+and Home Assistant shows whichever one the user has picked for the interface.
+
 ## Services
 
 Probes are addressed by name, the one you typed and the one the device shows.

@@ -31,6 +31,7 @@ from datetime import datetime, timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_UNIT_OF_MEASUREMENT, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant, State
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -752,15 +753,22 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
         """
         target = self.companions.moisture_calibration
         if target is None:
-            raise ValueError("no device-side moisture calibration entity was discovered")
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="no_device_calibration_entity",
+            )
         suggested, gain_deviation = self.suggested_device_offset()
         value = offset if offset is not None else suggested
         if value is None:
-            raise ValueError("no calibration is available to derive an offset from")
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="no_calibration_for_offset",
+            )
         if offset is None and gain_deviation is not None and gain_deviation > MAX_WRITEBACK_GAIN_DEVIATION:
-            raise ValueError(
-                f"fitted gain differs from the device scale by {gain_deviation:.0%}; "
-                "an offset cannot correct a slope, pass one explicitly to override"
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="gain_deviation_too_large",
+                translation_placeholders={"deviation": f"{gain_deviation:.0%}"},
             )
         await self.hass.services.async_call(
             "number",

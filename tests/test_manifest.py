@@ -42,8 +42,9 @@ def test_hacs_manifest_matches_the_integration_name(manifest):
 
 def test_services_yaml_lists_exactly_the_registered_services():
     """A service in one file and not the other is either invisible or undocumented."""
+    yaml = pytest.importorskip("yaml")
     services_yaml = (COMPONENT_ROOT / "services.yaml").read_text(encoding="utf-8")
-    declared = {line.split(":")[0] for line in services_yaml.splitlines() if line and not line[0].isspace()}
+    declared = set(yaml.safe_load(services_yaml))
 
     registration_source = (COMPONENT_ROOT / "services.py").read_text(encoding="utf-8")
     const_source = (COMPONENT_ROOT / "const.py").read_text(encoding="utf-8")
