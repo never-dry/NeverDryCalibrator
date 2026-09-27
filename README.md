@@ -344,6 +344,67 @@ naming both numbers and the value to set. On clay at 30 cm of root depth, for
 instance, the reservoir holds 42 mm, a cycle must cover 12.6 mm, and a zone set
 to irrigate at 3 mm of depletion can never produce one.
 
+## How much do two identical probes disagree?
+
+This is the cheapest useful experiment this project has, it needs **no script, no
+token and no terminal**, and nobody has run it yet.
+
+Everything else here measures one probe against a modelled water deficit, and the
+error budget that comes out has never had anything measured underneath it. Two
+probes in the same soil answer part of that directly: they share the weather, the
+soil and the model, so whatever they disagree about is the hardware. It is a
+bound rather than a curiosity. If two nominally identical probes in one pot differ
+by X index points, no calibration of either can honestly resolve better than about
+X, whatever its fit statistics say.
+
+**Doing it entirely inside Home Assistant:**
+
+1. Put two or more identical probes into the same soil, close together, at the
+   same depth. A bucket of mixed soil is better than a bed, for the reason below.
+2. Add each of them to the integration as usual.
+3. Give them all the **same-soil group** label, anything you like: `pot`, `bucket`,
+   `bed-1`. The label is what declares that they share soil, and nothing is
+   compared without it.
+4. Watch `sensor.<hub>_probe_spread`. It updates every five minutes on its own.
+
+There is nothing to start. The measurement runs from the moment the second probe
+carries the label, and Home Assistant records it: the entity keeps normal history,
+and because it has a measurement state class it also keeps **long-term
+statistics**, which is hourly min, mean and max retained for years rather than
+days. **Developer tools -> Statistics** shows the whole series, and the History
+panel downloads it as CSV. The entity is a diagnostic one, so look for it on the
+hub device rather than on a dashboard.
+
+The attributes carry the evidence, not only the number: which group is worst,
+which probes were compared, and which were left out because they had no reading,
+had gone quiet, or had stopped sensing.
+
+**Two things that decide whether the answer means anything:**
+
+* **One reading is one moisture level.** Two probes can agree at field capacity
+  and diverge badly when dry, which a short look cannot see. Leave it running
+  through a full dry-down, several days, and the history holds the whole picture.
+* **In a garden bed you measure the instrument plus the soil**, and one run cannot
+  separate them: probes ten centimetres apart genuinely sit in different soil.
+  Either swap the probes between holes and compare again, or use a bucket of
+  homogenised soil, which is the version worth publishing.
+
+**When the script is still the right tool:** sampling faster than five minutes, or
+running against an instance you would rather not reconfigure. It needs `HA_URL`
+and `HA_TOKEN`, and it prints a summary the entity does not:
+
+```bash
+python3 scripts/probe_spread.py sensor.probe_a sensor.probe_b sensor.probe_c
+python3 scripts/probe_spread.py --hours 72 --every 300 sensor.probe_a sensor.probe_b
+```
+
+The reasoning, the open questions and what a useful report looks like are in
+[`docs/design/rfc-001-co-located-probes.md`](docs/design/rfc-001-co-located-probes.md).
+**A result showing the probes agree closely would be the most useful outcome of
+all**, and would retire most of that document. Please post what you find, boring
+or not, in
+[Discussions](https://github.com/never-dry/NeverDryCalibrator/discussions/new?category=show-and-tell).
+
 ## Limits worth knowing
 
 * The calibration describes **one point of measurement at one depth**. Moving the
@@ -378,20 +439,6 @@ Releases are cut by pushing a `v*` tag: the workflow refuses a red build, checks
 that the manifest version matches the tag, packages the integration directory
 into `neverdry_calibrator.zip` and publishes it with the changelog section as
 release notes.
-
-```bash
-# How much do identical probes in one pot of soil disagree? Needs HA_URL and
-# HA_TOKEN; the token is read and never printed.
-python3 scripts/probe_spread.py sensor.probe_a sensor.probe_b sensor.probe_c
-python3 scripts/probe_spread.py --hours 72 --every 300 sensor.probe_a sensor.probe_b
-```
-
-That last one is the cheapest useful experiment this project has, and it needs no
-calibration and no code: whatever probes sharing soil disagree about is neither
-the weather nor the model, it is the instrument, and it bounds what any
-calibration of them can honestly claim. See
-[`docs/design/rfc-001-co-located-probes.md`](docs/design/rfc-001-co-located-probes.md),
-and please report what you find.
 
 ```bash
 python3 scripts/download_counts.py          # per release, with the totals
