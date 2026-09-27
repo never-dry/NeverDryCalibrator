@@ -6,13 +6,17 @@
     <!-- A static host sets no response headers, so the policy has to be markup.
          Known limit: frame-ancestors, report-uri and sandbox are ignored when a
          CSP arrives in a meta tag, so this does not protect against framing.
-         No analytics here and therefore no connect-src: nothing on this page
-         calls anywhere, which is also why it needs no privacy page. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com https://img.shields.io https://my.home-assistant.io; connect-src 'none'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
+         connect-src allows exactly one origin, the analytics ingest endpoint,
+         and nothing else on this page calls anywhere. What that endpoint sees is
+         stated in privacy.html rather than left to be discovered. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com https://img.shields.io https://my.home-assistant.io; connect-src https://hub.vemetric.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
     <title>NeverDry Calibrator - Make a Cheap Soil Probe Readable</title>
     <!-- Language map and switch, in <head> so nobody sees a flash of the wrong
          language. Without JavaScript the reader stays on English, which is the
          correct answer and not a degraded one. -->
+    <!-- Analytics, served from our own origin: see vendor/README.md -->
+    <script src="/NeverDryCalibrator/vendor/vemetric-init.js"></script>
+    <script defer src="/NeverDryCalibrator/vendor/vemetric-main.js" id="vmtrc-scr" data-token="kWxWHG8vfMvXQEwT"></script>
     <script src="/NeverDryCalibrator/languages.js"></script>
     <script src="/NeverDryCalibrator/lang_switch.js"></script>
     <link rel="icon" type="image/png" sizes="32x32" href="/NeverDryCalibrator/favicon-32x32.png">
@@ -228,7 +232,7 @@
 
 <footer>
     <p>MIT licensed. Built for Home Assistant.</p>
-    <p class="site-provenance">Last updated {{SITE_UPDATED}} &middot; v{{SITE_VERSION}} &middot; <a href="https://github.com/never-dry/NeverDryCalibrator/tree/main/docs/gh-pages">source</a></p>
+    <p class="site-provenance"><a href="/NeverDryCalibrator/privacy.html">Privacy</a> (EN) &middot; Last updated {{SITE_UPDATED}} &middot; v{{SITE_VERSION}} &middot; <a href="https://github.com/never-dry/NeverDryCalibrator/tree/main/docs/gh-pages">source</a></p>
 </footer>
 
 </body>
