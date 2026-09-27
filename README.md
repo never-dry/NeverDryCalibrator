@@ -380,6 +380,10 @@ the numbers for what they are: HACS fetches that archive again at every update,
 so the total measures activity rather than people, and none of these figures is
 an install count.
 
+## Acknowledgments
+
+Developed by [drake69](https://github.com/drake69) with AI assistance ([Claude](https://claude.ai) by Anthropic).
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
