@@ -90,6 +90,37 @@ def test_every_placement_suspicion_has_its_advice():
             assert str(confidence) in states, f"{path.name}: probe_placement.{confidence} has no label"
 
 
+def test_every_repair_the_code_can_raise_is_translated():
+    """The general form of the check above, so the next repair added cannot slip through.
+
+    The placement check enumerates a domain enum, which covers the six signatures
+    and nothing else. A repair raised from anywhere else in the integration was
+    invisible to it, and a repair with no strings shows the user a raw translation
+    key where the advice should be.
+
+    Read from the ``ISSUE_*`` constants of ``const.py``, which is where every issue
+    id in this integration comes from. ``ISSUE_PLACEMENT_PREFIX`` is skipped
+    deliberately: it is a prefix rather than a key, and the test above owns it.
+    """
+    tree = ast.parse((COMPONENT_ROOT / "const.py").read_text(encoding="utf-8"))
+    keys: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Constant):
+            continue
+        for target in node.targets:
+            name = getattr(target, "id", "")
+            if name.startswith("ISSUE_") and name != "ISSUE_PLACEMENT_PREFIX":
+                keys.append(node.value.value)
+    assert keys, "no ISSUE_* constants found: this check would pass by being empty"
+
+    for path in _translation_files():
+        issues = _load(path).get("issues", {})
+        for key in keys:
+            assert key in issues, f"{path.name}: issues.{key} is raised in code but not translated"
+            assert issues[key].get("title"), f"{path.name}: issues.{key} has no title"
+            assert issues[key].get("description"), f"{path.name}: issues.{key} has no description"
+
+
 def _const_lists() -> dict[str, list[str]]:
     """String constants and lists of them declared in ``const.py``.
 

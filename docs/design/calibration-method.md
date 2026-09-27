@@ -117,7 +117,9 @@ Every admission rule below removes a specific way of learning something false.
 | No sample while it rains, or for the drainage window after rain too small to count as a wetting | Rain the reservoir barely notices still wets the centimetres the probe reads. Without a gauge those readings enter the fit as ordinary dry-down points and bias it wet, silently. |
 | No sample for the drainage window (3 h default) | The wetting front redistributes for hours. A reading taken at minute twenty describes a profile that will not exist at hour three. |
 | Deficit must be fresh (30 min default) | A stale deficit pairs today's probe reading with yesterday's soil. |
-| Probe temperature must be fresh (2 h default) | The liveness sentinel. A flat battery keeps publishing the last moisture value forever; the temperature channel is what stops arriving. |
+| The probe's device must have spoken recently | The liveness sentinel. A flat battery keeps publishing the last moisture value forever. The bar is the device's own longest observed silence rather than a constant, and the silence is measured across every entity of the device rather than one channel: see [Whether the probe is still alive](probe-liveness.md), section 3. |
+| The index must move while the soil dries | The failure no measure of silence can see: the radio, the battery and the temperature all behave while the electrode has stopped. Half the reservoir of drying with the index still is not a probe in a bad spot, it is a probe that is not measuring. Section 4 of the same document. |
+| Battery above 5 percent (configurable, zero turns it off) | The earliest indicator of both of the above. A sagging supply also shifts the index without the soil shifting. |
 | Soil above 2 degrees | Frozen water is not liquid water dielectrically. The reading collapses and means nothing about available water. |
 | At most one sample every 10 minutes | Autocorrelation control, and it keeps the store bounded. |
 | Index inside 0 to 100 | A sensor outside that range is not the instrument this integration was told about. |

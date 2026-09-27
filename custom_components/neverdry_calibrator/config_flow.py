@@ -29,6 +29,7 @@ from .const import (
     CONF_DRAINAGE_MINUTES,
     CONF_FIELD_CAPACITY,
     CONF_IRRIGATION_ENTITY,
+    CONF_MIN_BATTERY_PERCENT,
     CONF_MIN_CYCLES,
     CONF_MIN_R_SQUARED,
     CONF_MIN_RAW_SPAN,
@@ -608,6 +609,13 @@ class NeverDryCalibratorOptionsFlow(OptionsFlow):
                     CONF_MIN_SOIL_TEMPERATURE,
                     default=current.get(CONF_MIN_SOIL_TEMPERATURE, blank.min_soil_temperature_c),
                 ): _number(-5, 15, 0.5, "C"),
+                # Zero is a real choice here and the bottom of the range says so:
+                # a site whose probes report a battery level they made up is better
+                # off with the check off than with it guessing.
+                vol.Required(
+                    CONF_MIN_BATTERY_PERCENT,
+                    default=current.get(CONF_MIN_BATTERY_PERCENT, blank.min_battery_percent),
+                ): _number(0, 50, 1, "%"),
             }
         )
         return self.async_show_form(step_id="sampling", data_schema=schema)

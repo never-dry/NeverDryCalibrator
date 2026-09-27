@@ -18,6 +18,15 @@ from .calibration import (
 )
 from .cycles import CycleClosure, CyclePolicy, CycleTracker, DryDownCycle, TrackerState, WaterSource
 from .estimator import LineFit, TemperatureAwareFit, fit_with_temperature, theil_sen, two_point_line
+from .liveness import (
+    CADENCE_LEARNING_MIN_S,
+    CADENCE_LEARNING_MULTIPLE,
+    CADENCE_MEMORY_S,
+    CADENCE_TOLERANCE,
+    LIVENESS_CEILING_S,
+    ProbeCadence,
+    SensingWitness,
+)
 from .placement import (
     PlacementConfidence,
     PlacementPolicy,
@@ -40,9 +49,12 @@ from .soil import SOIL_TEXTURE_DEFAULTS, InvalidSoilProfile, SoilProfile, SoilTe
 from .units import deficit_to_mm, depth_to_m, raw_index_to_percent, temperature_to_celsius
 
 __all__ = [
-    "SOIL_TEXTURE_DEFAULTS",
     "Admission",
     "AdmissionPolicy",
+    "CADENCE_MEMORY_S",
+    "CADENCE_LEARNING_MIN_S",
+    "CADENCE_LEARNING_MULTIPLE",
+    "CADENCE_TOLERANCE",
     "CalibratedReading",
     "CalibrationFit",
     "CalibrationSession",
@@ -54,12 +66,14 @@ __all__ = [
     "GateVerdict",
     "InvalidSoilProfile",
     "InvalidationReason",
+    "LIVENESS_CEILING_S",
     "LineFit",
     "Observation",
     "PlacementConfidence",
     "PlacementPolicy",
     "PlacementSuspicion",
     "PlacementVerdict",
+    "ProbeCadence",
     "ProbeLiveness",
     "QualityGates",
     "RainPolicy",
@@ -67,8 +81,10 @@ __all__ = [
     "RainUpdate",
     "RainWitness",
     "RejectionReason",
+    "SOIL_TEXTURE_DEFAULTS",
     "Sample",
     "SampleBuffer",
+    "SensingWitness",
     "SoilProfile",
     "SoilTexture",
     "TemperatureAwareFit",

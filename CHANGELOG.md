@@ -4,6 +4,89 @@ All notable changes to this integration are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.4.0 - 2026-09-27
+
+Credit is no longer given to a probe that has stopped working. The mechanism comes
+from the sibling project NeverDry, which already judged a probe's silence against
+the probe's own habits rather than against a constant, and it arrives here tuned
+the other way round and with a second channel NeverDry does not have.
+
+The tuning is reversed because the cost is. There, refusing a live probe hands a
+zone to a weather estimate on a different scale, silently, every night, which is
+worse than a day of delay. Here, a refusal is named on a diagnostic built to be
+read, while believing a dead probe puts its readings into the published line and
+leaves them there after the probe is fixed. So this side errs towards refusing:
+the ceiling on the freshness bar is six hours where NeverDry's backstop is
+twenty-four, and a probe that has not yet demonstrated a cadence is judged by the
+configured timeout rather than by the ceiling.
+
+The warning of 0.1.0 and 0.3.0 still stands: the error budget is argued from soil
+physics and not yet measured against a probe in the ground, and the placement
+thresholds are argued rather than measured. The three thresholds added here are
+argued too, and `docs/design/probe-liveness.md` says from what.
+
+### Added
+
+- **Liveness is now the device's, not one channel's.** The silence that decides
+  whether a probe may be believed is measured across every entity of the probe's
+  device, and no entity is inspected for what it says: that it spoke at all is the
+  evidence. Home Assistant writes a sensor's state only when its value changes, so
+  a probe on ground that is not moving publishes nothing on its moisture entity
+  while its temperature, battery and link quality carry on. Judged on one channel,
+  a live probe is declared dead for reporting the same number twice. A probe whose
+  entity belongs to no device keeps the temperature channel it always had.
+- **The bar a silence is judged against is learned from the probe.** The longest
+  quiet the device has come back from inside a trailing week, doubled, capped at
+  six hours. A maximum and not a quantile: a device reporting on change produces
+  many short gaps while its readings move and a few long ones that are the only
+  evidence of its heartbeat, and any statistic that lets the first outvote the
+  second sets the bar below the heartbeat. The learned bar takes over only after a
+  full day of watching and four times the longest silence seen; until then the
+  configured **Probe considered offline after** value applies, exactly as before,
+  so nothing changes for a new installation or for one that tuned that number. The
+  evidence is persisted, because the other half of the judgement is rebuilt from
+  the states for free and restoring half a judgement is worse than restoring none.
+- **A second channel for the electrode that stops while the device keeps talking.**
+  The radio is fine, the battery reports eighty percent, the temperature follows
+  the day, and the moisture reading is the same whatever the soil does. No silence
+  exists, so no measure of silence can find it. What finds it is the reference: half
+  the reservoir of drying with the index not moving half a point. Samples are
+  refused with their own reason, a repair says the device is talking and the reading
+  is not, and the fall of a deficit resets the stretch rather than completing it,
+  because water arrives as a discontinuity and a delivery would otherwise condemn
+  any probe that had not refreshed inside the poll interval.
+- **A battery floor**, five percent by default and configurable, zero turning it
+  off. The earliest indicator of both failures above, and a sagging supply shifts
+  the index without the soil shifting. An exact zero is treated as no information
+  rather than as an empty battery: a device that is talking cannot truthfully be at
+  zero, so zero is a device reporting its battery badly, and refusing every sample
+  from one of those would cost the calibration for a channel the calibration does
+  not use.
+- `docs/design/probe-liveness.md`: the cost asymmetry that sets every threshold,
+  the alternatives rejected and the numbers behind them, and what remains wrong.
+
+### Changed
+
+- **A probe that has stopped measuring is no longer diagnosed as a probe in the
+  wrong place.** The two produce the same signature, an index that does not move,
+  and they do not have the same repair: every placement message ends in some form
+  of "consider moving the probe", and a user who digs one up finds it just as
+  motionless in the new hole, which reads as confirmation. The placement module's
+  **no response** suspicion is therefore withheld while the electrode is stalled,
+  and the reason for withholding it is recorded in the placement entity's evidence
+  so a verdict that raised nothing can be told from one that was silenced. Nothing
+  takes its place there: a dead electrode is not a placement fault.
+- **Probe online** publishes the silence and the bar it was judged against
+  together, plus the entities enrolled as witnesses. Both numbers or neither: an
+  age without its bar invites the reader to compare it with a number they invented.
+  It stays `on` for a stalled electrode, because that probe is online; the stall is
+  carried by **Calibration problem**, with the drying travel the index failed to
+  respond to.
+- The diagnostics download carries the cadence evidence and the witness state
+  alongside the samples. The first question about a suspect calibration is whether
+  the probe was alive while it was collected, and that cannot be reconstructed from
+  the samples afterwards.
+
 ## 0.3.1 - 2026-09-18
 
 A repair to what the integration says, not to what it does. It already spoke

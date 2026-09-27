@@ -33,6 +33,40 @@ def probe_index(soil: SoilProfile, deficit_mm: float, temperature_c: float, nois
     return max(0.0, min(100.0, raw))
 
 
+def dead_probe(soil: SoilProfile, deficit_mm: float, temperature_c: float, noise: float) -> float:
+    """A probe whose electrode has stopped: the same index whatever the soil does.
+
+    Measured against the reference, this is one index point per reservoir or less,
+    which is the signature :class:`~model.liveness.SensingWitness` exists for. It
+    is deliberately *not* the fixture for a misplaced probe: see
+    :func:`weakly_responding_probe`.
+    """
+    return 50.0 + noise * 0.05
+
+
+#: How much of the healthy probe's excursion a badly placed one keeps.
+#:
+#: Chosen by measurement rather than taste, to land between the two thresholds
+#: that must stay apart: it gives about 1.4 index points per cycle, under the two
+#: points at which placement calls a probe unresponsive, and about ten
+#: millimetres of drying per half index point, twice what the stalled-electrode
+#: witness demands. A probe generated this way is blamed on its placement and
+#: never on its electrode, which is the whole point of having two channels.
+WEAK_RESPONSE_FRACTION = 0.03
+
+
+def weakly_responding_probe(soil: SoilProfile, deficit_mm: float, temperature_c: float, noise: float) -> float:
+    """A probe that follows the soil far too weakly, which is what bad placement looks like.
+
+    A probe in a gravel void or outside the volume the irrigation wets still sees
+    the soil, only faintly: evaporation reaches it, so its index moves, just not
+    enough to calibrate against. That distinction is the one the placement
+    diagnostics rest on, so the fixture has to have it.
+    """
+    healthy = probe_index(soil, deficit_mm, temperature_c, 0.0)
+    return 50.0 + (healthy - 50.0) * WEAK_RESPONSE_FRACTION + noise * 0.05
+
+
 def true_slope(soil: SoilProfile) -> float:
     """Slope the calibration should recover: water content per index point."""
     return (soil.field_capacity - soil.wilting_point) / (RAW_AT_FIELD_CAPACITY - RAW_AT_WILTING_POINT)

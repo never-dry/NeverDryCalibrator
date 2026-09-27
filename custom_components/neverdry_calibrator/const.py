@@ -63,6 +63,7 @@ CONF_PROBE_TIMEOUT = "probe_timeout_s"
 CONF_DRAINAGE_MINUTES = "drainage_minutes"
 CONF_MIN_SOIL_TEMPERATURE = "min_soil_temperature_c"
 CONF_REQUIRE_PROBE_TEMPERATURE = "require_probe_temperature"
+CONF_MIN_BATTERY_PERCENT = "min_battery_percent"
 CONF_IRRIGATION_DROP_FRACTION = "irrigation_drop_fraction"
 CONF_WET_ANCHOR_FRACTION = "wet_anchor_fraction"
 CONF_MIN_CYCLE_SPAN_FRACTION = "min_cycle_span_fraction"
@@ -129,6 +130,12 @@ THRESHOLD_KEYWORDS: tuple[str, ...] = ("threshold", "soglia", "trigger")
 
 #: Repair issue raised when the irrigation regime cannot produce a countable cycle.
 ISSUE_THRESHOLD_TOO_LOW = "irrigation_threshold_too_low"
+
+#: Repair raised when the device keeps talking and the electrode has stopped.
+#: Its own issue rather than a placement one: the placement repairs all end in
+#: "consider moving the probe", which is the wrong instruction here and an
+#: expensive one to follow.
+ISSUE_SENSING_STALLED = "probe_sensing_stalled"
 
 #: Prefix of the repair raised when the collected cycles suggest the probe is in
 #: the wrong place. The suspicion name is appended, so every signature gets its

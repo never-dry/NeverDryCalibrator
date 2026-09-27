@@ -38,7 +38,14 @@ async def async_setup_entry(
 
 
 class ProbeOnlineBinarySensor(CalibratorEntity, BinarySensorEntity):
-    """Whether the probe is still reporting, judged by its temperature channel."""
+    """Whether the probe's device is still reporting, judged against its own cadence.
+
+    Deliberately still ``on`` for a probe whose electrode has stopped while the
+    device keeps talking. That probe *is* online, and saying otherwise would make
+    this entity mean two things at once and be useful for neither. The stall is
+    reported in the attributes here and carried by the attention entity below,
+    which is where a consumer looks to find out that the reading cannot be used.
+    """
 
     entity_description = BinarySensorEntityDescription(
         key="probe_online",
@@ -54,11 +61,11 @@ class ProbeOnlineBinarySensor(CalibratorEntity, BinarySensorEntity):
 
     @property
     def is_on(self) -> bool | None:
-        """On while the probe is alive; unknown when there is no sentinel to read.
+        """On while the device is alive; unknown when there is no sentinel to read.
 
-        With no temperature channel on the device the question cannot be answered
-        honestly, so the entity stays unknown rather than claiming the probe is
-        fine because nothing said otherwise.
+        With neither a resolvable device nor a temperature channel the question
+        cannot be answered honestly, so the entity stays unknown rather than
+        claiming the probe is fine because nothing said otherwise.
         """
         data = self.data
         if data is None:
@@ -75,9 +82,15 @@ class ProbeOnlineBinarySensor(CalibratorEntity, BinarySensorEntity):
             return {}
         return {
             "liveness": str(data.liveness),
+            # Both numbers or neither: an age without its bar invites the reader to
+            # compare it with a constant they invented.
+            "device_silence_s": round(data.device_age_s) if data.device_age_s is not None else None,
+            "silence_allowed_s": round(data.liveness_bar_s) if data.liveness_bar_s is not None else None,
+            "device_entities": list(self.coordinator.companions.device_entities),
             "sentinel_entity": self.coordinator.companions.probe_temperature,
             "probe_temperature_c": data.probe_temperature_c,
             "battery_percent": data.battery_percent,
+            "sensing_stalled": data.sensing_stalled,
         }
 
 
@@ -121,4 +134,10 @@ class CalibrationProblemBinarySensor(CalibratorEntity, BinarySensorEntity):
             "status": str(data.status),
             "drift_percent": round(data.drift_rmse * 100.0, 3) if data.drift_rmse is not None else None,
             "invalidation_reason": str(session.invalidation_reason) if session.invalidation_reason else None,
+            # Which of the two silent failures is behind a ``probe_offline``
+            # status. The status cannot say, because one status is what a consumer
+            # of this integration needs and two is what a human fixing it needs.
+            "sensing_stalled": data.sensing_stalled,
+            "stalled_travel_mm": round(data.stalled_travel_mm, 1),
+            "stalled_travel_required_mm": round(data.stalled_travel_required_mm, 1),
         }

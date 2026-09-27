@@ -46,6 +46,7 @@ from .const import (
     CONF_RAIN_ENTITY,
     DOMAIN,
     ISSUE_PLACEMENT_PREFIX,
+    ISSUE_SENSING_STALLED,
     ISSUE_THRESHOLD_TOO_LOW,
     REFIT_INTERVAL_MINUTES,
     STORAGE_SAVE_DELAY_S,
@@ -150,6 +151,17 @@ class CalibratorData:
     irrigation_active: bool
     seconds_since_irrigation: float | None
     battery_percent: float | None
+    #: Age of the newest word from the probe's device [s], and the bar it was
+    #: judged against. Published together because neither means anything alone:
+    #: "quiet for forty minutes" is a fault on one probe and routine on the next.
+    device_age_s: float | None = None
+    liveness_bar_s: float | None = None
+    #: The electrode has stopped answering while the device carries on talking.
+    sensing_stalled: bool = False
+    #: Drying travel the index failed to respond to [mm], with what it would have
+    #: had to reach. The numbers a user is owed alongside that verdict.
+    stalled_travel_mm: float = 0.0
+    stalled_travel_required_mm: float = 0.0
     thresholds: DerivedThresholds | None = None
     irrigation_threshold_mm: float | None = None
     placement: PlacementVerdict | None = None
@@ -257,6 +269,41 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
             return float(state.state)
         except (TypeError, ValueError):
             return None
+
+    def _device_age_seconds(self, now: datetime) -> float | None:
+        """Age of the newest word from any entity of the probe's device [s].
+
+        The union of the device's entities and not the temperature channel alone,
+        because the question is whether the *device* is talking. Home Assistant
+        writes a sensor's state when its value changes, so a probe on ground that
+        is not moving publishes nothing on its moisture entity while its
+        temperature, its battery and its link quality carry on; judged on one
+        channel, a live probe is called dead for reporting the same number twice.
+        No entity is inspected for what it says.
+
+        ``None`` when no entity of the device has a usable timestamp, which sends
+        the liveness check back to the temperature channel.
+
+        Residual, stated rather than hidden: immediately after a restart every
+        restored state carries a fresh timestamp, so for one poll a dead device
+        looks alive here. The bar it is compared against survives the restart, and
+        the stalled-electrode witness does not depend on timestamps at all, so the
+        window is one cycle wide and the second channel still covers it.
+        """
+        latest: datetime | None = None
+        for entity_id in self.companions.device_entities or ():
+            state = self.hass.states.get(entity_id)
+            if state is None:
+                continue
+            stamp = getattr(state, "last_reported", None) or getattr(state, "last_updated", None)
+            # Guarded rather than trusted: a stand-in state object in a test hands
+            # back something that is not a datetime, and the comparison would raise
+            # inside the one call every reader goes through.
+            if isinstance(stamp, datetime) and stamp.tzinfo is not None and (latest is None or stamp > latest):
+                latest = stamp
+        if latest is None:
+            return None
+        return max(0.0, (now - latest).total_seconds())
 
     def _read_temperature(self, key: str) -> tuple[float | None, float | None]:
         """Read a temperature source as degrees Celsius plus the age of the reading."""
@@ -468,6 +515,7 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
         probe_temperature, probe_age = self._read_temperature(CONF_PROBE_TEMPERATURE_ENTITY)
         ambient_temperature, _ = self._read_temperature(CONF_AMBIENT_TEMPERATURE_ENTITY)
         irrigation_active = self._read_irrigation()
+        device_age = self._device_age_seconds(now)
 
         seconds_since_irrigation = None
         if self._last_irrigation_end is not None:
@@ -480,9 +528,11 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
             raw_percent=raw_percent,
             deficit_mm=deficit_mm,
             deficit_age_s=deficit_age,
+            device_age_s=device_age,
             probe_temperature_c=probe_temperature,
             probe_temperature_age_s=probe_age,
             ambient_temperature_c=ambient_temperature,
+            battery_percent=self._battery_percent(),
             irrigation_active=irrigation_active,
             seconds_since_irrigation=seconds_since_irrigation,
             rain_active=raining,
@@ -600,6 +650,40 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
             translation_placeholders=self._placement_placeholders(),
         )
 
+    def _review_sensing(self) -> None:
+        """Raise or clear the repair that says the probe has stopped measuring.
+
+        Its own repair rather than a placement one, and that is the point of the
+        whole second channel. The placement advice ends in "consider moving the
+        probe", and a user who digs up a probe whose electrode is dead will find
+        that it does not move in the new hole either, which reads as confirmation.
+        This one says the device is talking and the reading is not, which is a
+        different afternoon's work.
+        """
+        issue_id = f"{ISSUE_SENSING_STALLED}_{self.entry.entry_id}_{self.probe.probe_id}"
+        if not self.session.sensing_stalled:
+            ir.async_delete_issue(self.hass, DOMAIN, issue_id)
+            return
+        taw = self.session.soil.total_available_water_mm
+        # A dash where the device publishes no battery, as the placement placeholders
+        # do. A word here would be an English word inside a translated sentence.
+        battery = self._battery_percent()
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            issue_id,
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key=ISSUE_SENSING_STALLED,
+            translation_placeholders={
+                "probe": self.probe.name,
+                "moisture_entity": self.probe.moisture_entity,
+                "travel": f"{self.session.sensing.stalled_travel_mm:.1f}",
+                "required": f"{self.session.sensing.required_travel_mm(taw):.1f}",
+                "battery": f"{battery:.0f}%" if battery is not None else "-",
+            },
+        )
+
     def _placement_issue_id(self, suspicion: PlacementSuspicion) -> str:
         """Issue id of one signature on one probe of one entry."""
         return f"{ISSUE_PLACEMENT_PREFIX}_{suspicion}_{self.entry.entry_id}_{self.probe.probe_id}"
@@ -654,6 +738,7 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
         configured_threshold = self.configured_irrigation_threshold_mm()
         self._review_irrigation_regime(thresholds, configured_threshold)
         self._review_placement()
+        self._review_sensing()
 
         return CalibratorData(
             status=self.session.status,
@@ -663,7 +748,16 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
             ambient_temperature_c=observation.ambient_temperature_c,
             reading=reading,
             provisional_moisture=provisional,
-            liveness=probe_liveness(observation, self.session.admission_policy),
+            liveness=probe_liveness(observation, self.session.admission_policy, self.session.cadence),
+            device_age_s=observation.device_age_s,
+            liveness_bar_s=self.session.cadence.bar_s(
+                observation.taken_at.timestamp(), self.session.admission_policy.probe_timeout_s
+            ),
+            sensing_stalled=self.session.sensing_stalled,
+            stalled_travel_mm=self.session.sensing.stalled_travel_mm,
+            stalled_travel_required_mm=self.session.sensing.required_travel_mm(
+                self.session.soil.total_available_water_mm
+            ),
             fit=self.session.fit,
             verdict=self._verdict,
             drift_rmse=self.session.drift_rmse,
@@ -792,4 +886,16 @@ class CalibrationCoordinator(DataUpdateCoordinator[CalibratorData]):
             "cycles": [cycle.to_dict() for cycle in self.session.tracker.cycles],
             "samples": self.session.buffer.to_list(),
             "rejections": dict(self.session.rejection_counts),
+            # The liveness evidence travels with the samples, because the first
+            # question about a suspect calibration is whether the probe was alive
+            # while it was being collected, and that cannot be reconstructed from
+            # the samples themselves.
+            "liveness": {
+                "device_entities": list(self.companions.device_entities),
+                "cadence": self.session.cadence.to_dict(),
+                "last_device_seen_at": (
+                    self.session.last_device_seen_at.isoformat() if self.session.last_device_seen_at else None
+                ),
+                "sensing": self.session.sensing.to_dict(),
+            },
         }

@@ -48,8 +48,9 @@ as before: rain still arrives through the deficit collapsing, which catches
 downpours and misses showers.
 
 Everything else is discovered. From the probe's own device the integration picks
-up its temperature channel, its battery, and any calibration knobs the device
-exposes.
+up its temperature channel, its battery, any calibration knobs the device exposes,
+and the full list of entities that device publishes, which is what tells the
+integration whether the probe is still alive.
 
 ## Installation
 
@@ -103,8 +104,8 @@ installation itself.
 | `sensor.<probe>_complete_cycles` | Cycles that counted as evidence, with the last ten described in the attributes. |
 | `sensor.<probe>_required_depletion` | How dry the soil must get between two irrigations for a cycle to count, in millimetres, with the other derived thresholds and the irrigation threshold of the zone in its attributes. |
 | `sensor.<probe>_calibration_drift` | Recent disagreement between the published line and the reference. The early warning that a probe is ageing. |
-| `binary_sensor.<probe>_probe_online` | The temperature sentinel: a flat battery keeps publishing the last moisture value forever, but the temperature stops arriving. |
-| `binary_sensor.<probe>_calibration_problem` | On when the calibration is drifting, invalidated, or the probe is offline. |
+| `binary_sensor.<probe>_probe_online` | Whether the probe's device is still talking. A flat battery keeps publishing the last moisture value forever, so the question is asked of how long since *any* entity of the device spoke, against a bar learned from the probe's own longest silence rather than a constant. Both numbers are in the attributes. |
+| `binary_sensor.<probe>_calibration_problem` | On when the calibration is drifting, invalidated, or the probe is not supplying evidence, whether because the device went quiet or because the electrode stopped answering while the device carried on. The attributes say which. |
 
 Every word the integration shows is translated: the setup forms, the names of
 those entities, the states they publish, the repairs they raise and the refusals
@@ -136,7 +137,10 @@ before anything is published.
 Long version, with the physics, the failure modes and the reasoning behind every
 threshold: [`docs/design/calibration-method.md`](docs/design/calibration-method.md).
 The objects that implement it are described in
-[`docs/design/domain-model.md`](docs/design/domain-model.md).
+[`docs/design/domain-model.md`](docs/design/domain-model.md). How the integration
+decides a probe has stopped working, which is the difference between a calibration
+and a line fitted to a dead instrument:
+[`docs/design/probe-liveness.md`](docs/design/probe-liveness.md).
 
 ## Where to put the probe
 
@@ -375,6 +379,10 @@ it generates for a tag, which is why the workflow attaches an explicit zip. Read
 the numbers for what they are: HACS fetches that archive again at every update,
 so the total measures activity rather than people, and none of these figures is
 an install count.
+
+## Acknowledgments
+
+Developed by [drake69](https://github.com/drake69) with AI assistance ([Claude](https://claude.ai) by Anthropic).
 
 ## License
 

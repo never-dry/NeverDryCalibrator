@@ -16,11 +16,12 @@ from __future__ import annotations
 
 import statistics
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import StrEnum
 
 from .cycles import CycleClosure, CyclePolicy, CycleTracker, WaterSource
 from .estimator import LineFit, TemperatureAwareFit, fit_with_temperature, residual_rmse, two_point_line
+from .liveness import ProbeCadence, SensingWitness
 from .placement import PlacementPolicy, PlacementVerdict, assess_placement
 from .rain import RainPolicy, RainSensorKind, RainUpdate, RainWitness
 from .samples import (
@@ -248,6 +249,11 @@ class CalibrationSession:
     buffer: SampleBuffer = field(default_factory=SampleBuffer)
     tracker: CycleTracker | None = None
     rain_witness: RainWitness | None = None
+    #: The bar a silence is judged against, learned from this probe's own habits.
+    cadence: ProbeCadence = field(default_factory=ProbeCadence)
+    #: Watches for an electrode that stopped answering while the device kept
+    #: talking, which is the one failure no measure of silence can see.
+    sensing: SensingWitness = field(default_factory=SensingWitness)
     fit: CalibrationFit | None = None
     provisional_fit: CalibrationFit | None = None
     status: CalibrationStatus = CalibrationStatus.COLLECTING
@@ -255,6 +261,10 @@ class CalibrationSession:
     rejection_counts: dict[str, int] = field(default_factory=dict)
     last_sample_at: datetime | None = None
     last_fit_at: datetime | None = None
+    #: When the probe's device was last heard from, derived from the age the last
+    #: observation carried. Held so the *ended* silence between two words can be
+    #: measured, which is the only kind the cadence may learn from.
+    last_device_seen_at: datetime | None = None
     invalidation_reason: InvalidationReason | None = None
     drift_rmse: float | None = None
 
@@ -290,6 +300,10 @@ class CalibrationSession:
         axis at all.
         """
         assert self.tracker is not None
+        self._observe_device(observation)
+        self.sensing.note(observation.raw_percent, observation.deficit_mm, observation.taken_at)
+        stalled = self.sensing.stalled(self.soil.total_available_water_mm)
+
         seconds_since_last = None
         if self.last_sample_at is not None:
             seconds_since_last = (observation.taken_at - self.last_sample_at).total_seconds()
@@ -300,10 +314,16 @@ class CalibrationSession:
             soil=self.soil,
             cycle_index=self.tracker.current_index,
             seconds_since_last_sample=seconds_since_last,
+            cadence=self.cadence,
+            sensing_stalled=stalled,
         )
         if not admission.accepted or admission.sample is None:
             self._record_rejection(admission.reason)
-            if probe_liveness(observation, self.admission_policy) is ProbeLiveness.STALE:
+            if stalled or probe_liveness(observation, self.admission_policy, self.cadence) is ProbeLiveness.STALE:
+                # One status for two faults, and the repair tells them apart. A
+                # consumer of this integration only needs to know the probe is not
+                # supplying evidence; which way it failed is advice for a human,
+                # and advice belongs where it can carry a sentence.
                 self.status = CalibrationStatus.PROBE_OFFLINE
             return admission
 
@@ -328,6 +348,30 @@ class CalibrationSession:
         if self.status is CalibrationStatus.PROBE_OFFLINE:
             self.status = CalibrationStatus.CALIBRATED if self.fit else CalibrationStatus.COLLECTING
         return Admission.accept(stamped)
+
+    def _observe_device(self, observation: Observation) -> None:
+        """Time the quiet between two words from the probe's device, and learn from it.
+
+        Sampled on the way through rather than from a subscription of its own. The
+        session is offered every observation the coordinator builds, which is often
+        enough to see the device advance; and a missed advance merges two stretches
+        of quiet into one, which overstates the bar rather than understating it.
+        Overstating is the safe direction for the same reason the ceiling exists:
+        it delays a verdict, and the ceiling bounds the delay.
+        """
+        if observation.device_age_s is None:
+            return
+        seen = observation.taken_at - timedelta(seconds=max(0.0, observation.device_age_s))
+        previous = self.last_device_seen_at
+        if previous is not None and seen > previous:
+            self.cadence.record(seen.timestamp(), (seen - previous).total_seconds())
+        if previous is None or seen > previous:
+            self.last_device_seen_at = seen
+
+    @property
+    def sensing_stalled(self) -> bool:
+        """Whether the electrode has stopped answering a soil that is demonstrably drying."""
+        return self.sensing.stalled(self.soil.total_available_water_mm)
 
     def note_irrigation(self, at: datetime, source: WaterSource = WaterSource.UNKNOWN) -> None:
         """Tell the tracker that water reached the soil, from whatever witness saw it.
@@ -581,7 +625,13 @@ class CalibrationSession:
         assert self.tracker is not None
         cycles = self.tracker.complete_cycles()
         samples = self.buffer.for_cycles({cycle.index for cycle in cycles})
-        return assess_placement(cycles, samples, self.soil, self.placement_policy)
+        return assess_placement(
+            cycles,
+            samples,
+            self.soil,
+            self.placement_policy,
+            sensing_stalled=self.sensing_stalled,
+        )
 
     # ── Reading ──────────────────────────────────────────────────
 
@@ -652,6 +702,15 @@ class CalibrationSession:
             self.buffer.clear()
             self.tracker.reset()
             self.last_sample_at = None
+            # The anchor records an index that a different instrument published,
+            # so the travel measured against it is not evidence about this one.
+            self.sensing.reset()
+        if reason is InvalidationReason.SOURCE_CHANGED:
+            # A different entity may sit on a different device, and a cadence is a
+            # statement about one device. Kept across a knob turn, which changes
+            # what the probe says and not how often it says it.
+            self.cadence = ProbeCadence()
+            self.last_device_seen_at = None
         elif reason is InvalidationReason.SOIL_CHANGED:
             self.tracker.close_all(now, CycleClosure.SOIL_CHANGED)
 
@@ -662,6 +721,7 @@ class CalibrationSession:
         self.buffer.clear()
         self.tracker.reset()
         self.rain_witness.forget()
+        self.sensing.reset()
         self.fit = None
         self.provisional_fit = None
         self.drift_rmse = None
@@ -727,6 +787,9 @@ class CalibrationSession:
             "samples": self.buffer.to_list(),
             "tracker": self.tracker.to_dict(),
             "rain_witness": self.rain_witness.to_dict() if self.rain_witness else None,
+            "cadence": self.cadence.to_dict(),
+            "sensing": self.sensing.to_dict(),
+            "last_device_seen_at": self.last_device_seen_at.isoformat() if self.last_device_seen_at else None,
             "fit": self.fit.to_dict() if self.fit else None,
             "status": str(self.status),
             "last_rejection": str(self.last_rejection) if self.last_rejection else None,
@@ -758,6 +821,8 @@ class CalibrationSession:
             rain_policy,
             soil.total_available_water_mm,
         )
+        cadence = ProbeCadence.from_dict(data.get("cadence"))
+        sensing = SensingWitness.from_dict(data.get("sensing"))
 
         fit_data = data.get("fit")
         fit: CalibrationFit | None = None
@@ -779,6 +844,8 @@ class CalibrationSession:
             buffer=buffer,
             tracker=tracker,
             rain_witness=rain_witness,
+            cadence=cadence,
+            sensing=sensing,
             fit=fit,
         )
         session.status = CalibrationStatus(data.get("status", CalibrationStatus.COLLECTING))
@@ -791,6 +858,11 @@ class CalibrationSession:
         session.last_sample_at = datetime.fromisoformat(last_sample_at) if last_sample_at else None
         last_fit_at = data.get("last_fit_at")
         session.last_fit_at = datetime.fromisoformat(last_fit_at) if last_fit_at else None
+        seen = data.get("last_device_seen_at")
+        try:
+            session.last_device_seen_at = datetime.fromisoformat(seen) if isinstance(seen, str) else None
+        except ValueError:
+            session.last_device_seen_at = None
         invalidation = data.get("invalidation_reason")
         session.invalidation_reason = InvalidationReason(invalidation) if invalidation else None
         drift = data.get("drift_rmse")

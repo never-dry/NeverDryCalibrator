@@ -156,6 +156,7 @@ def _resolve_companions(hass: HomeAssistant, probe: ProbeConfig) -> CompanionEnt
         humidity_calibration=companions.humidity_calibration,
         soil_calibration=companions.soil_calibration,
         other_calibration=companions.other_calibration,
+        device_entities=companions.device_entities,
     )
 
 

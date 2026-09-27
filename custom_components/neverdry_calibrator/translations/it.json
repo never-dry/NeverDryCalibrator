@@ -176,12 +176,14 @@
           "min_sample_interval_s": "Intervallo minimo tra due campioni",
           "drainage_minutes": "Finestra di drenaggio dopo l'irrigazione",
           "probe_timeout_s": "Sonda considerata offline dopo",
-          "min_soil_temperature_c": "Rifiuta i campioni sotto questa temperatura del terreno"
+          "min_soil_temperature_c": "Rifiuta i campioni sotto questa temperatura del terreno",
+          "min_battery_percent": "Rifiuta i campioni sotto questo livello di batteria"
         },
         "data_description": {
           "drainage_minutes": "Tempo che serve al fronte di bagnatura per redistribuirsi. Le letture dentro questa finestra descrivono acqua in transito, non quella che la zona radicale trattiene.",
-          "probe_timeout_s": "Per quanto la temperatura della sonda puo' restare muta prima di considerare la sonda morta, tipicamente per batteria scarica.",
-          "min_soil_temperature_c": "L'acqua gelata non si comporta come l'acqua liquida in una lettura capacitiva."
+          "probe_timeout_s": "Solo ripiego, usato finche' la sonda non ha mostrato una cadenza propria: dopo tre silenzi da cui e' tornata, la soglia diventa il suo silenzio piu' lungo invece di questo numero.",
+          "min_soil_temperature_c": "L'acqua gelata non si comporta come l'acqua liquida in una lettura capacitiva.",
+          "min_battery_percent": "Una sonda con la batteria agli sgoccioli continua a pubblicare, e la sua tensione di eccitazione cala, cosa che muove l'indice senza che si muova il terreno. Zero disattiva il controllo, per un dispositivo che riporta un livello di batteria inventato."
         }
       },
       "gates": {
@@ -360,6 +362,10 @@
     "placement_outside_wetted_bulb": {
       "title": "{probe} si riempie quando piove e non quando la zona viene irrigata",
       "description": "Su {rain_cycles} cicli aperti dalla pioggia e {irrigation_cycles} aperti dall'irrigazione, la capacita' di campo ha letto {wet_anchor_gap} punti indice piu' in alto dopo la pioggia che dopo l'irrigazione. I due numeri descrivono lo stesso stato del terreno: un ciclo si apre solo quando il bilancio idrico dice che il profilo e' quasi pieno, quindi a cambiare e' la risposta della sonda, non l'acqua.\n\nLa pioggia cade su ogni centimetro quadrato. Un gocciolatoio bagna un bulbo intorno a se', e una sonda fuori da quel bulbo viene irrigata solo dal meteo. E' l'unico guasto che una sonda da sola non puo' diagnosticare, e il pluviometro e' cio' che lo rende visibile.\n\nSposta {probe} a circa meta' del raggio bagnato da un gocciolatoio: 8-12 cm su sabbia, 12-20 cm su medio impasto, 20-30 cm su argilla. Mai esattamente sotto il gocciolatoio. Poi azzera la calibrazione: i campioni raccolti finora descrivono la vecchia posizione."
+    },
+    "probe_sensing_stalled": {
+      "title": "{probe} ha smesso di misurare, ma continua a riportare",
+      "description": "Il dispositivo di {probe} comunica normalmente, e l'indice pubblicato da {moisture_entity} non si e' mosso mentre il terreno si asciugava di {travel} mm, contro i {required} mm entro cui una sonda funzionante deve rispondere. Batteria: {battery}.\n\nNon e' un problema di posizionamento. Una sonda in una posizione sbagliata segue comunque il terreno, solo debolmente; una che non si muove affatto mentre un conto indipendente dello stesso terreno dice che l'acqua sta uscendo ha smesso di sentire. Da controllare in quest'ordine: la batteria, i contatti e l'elettrodo per la corrosione, poi l'acqua dentro l'involucro.\n\nNel frattempo i campioni vengono rifiutati, quindi nessuna calibrazione si sta costruendo sulle letture congelate. Quando la sonda e' riparata o sostituita, azzera la calibrazione di {probe}: quello che e' stato raccolto prima descrive un altro strumento."
     }
   },
   "exceptions": {

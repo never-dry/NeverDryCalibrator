@@ -300,6 +300,7 @@ def assess_placement(
     samples: Sequence[Sample],
     soil: SoilProfile,
     policy: PlacementPolicy | None = None,
+    sensing_stalled: bool = False,
 ) -> PlacementVerdict:
     """Read the collected cycles for signs that the probe is in the wrong place.
 
@@ -310,6 +311,16 @@ def assess_placement(
     Below ``min_cycles`` the answer is ``NOT_ENOUGH_EVIDENCE`` and the suspicion
     list is empty. Saying "looks fine" after one cycle would be the same mistake
     the honesty rule was written to prevent, one level up.
+
+    ``sensing_stalled`` withholds ``NO_RESPONSE``, and nothing else. A probe whose
+    electrode has stopped answering produces the signature of a probe that is not
+    in the water, because in both cases the index does not move; but the two are
+    not the same finding and they do not have the same repair. Publishing the
+    placement one would send a user out to dig up a probe whose battery or
+    front end is the problem, and the digging would appear to confirm it, since
+    the index does not move in the new hole either. A stalled electrode is not a
+    placement fault, so it is not given a suspicion of its own here either: it is
+    named where it belongs, as a refusal reason and a repair of its own.
     """
     policy = policy or PlacementPolicy()
     taw = soil.total_available_water_mm
@@ -334,11 +345,15 @@ def assess_placement(
     evidence["points_per_reservoir"] = round(median_resolution, 1)
     evidence["points_per_reservoir_required"] = policy.min_points_per_reservoir
 
+    evidence["sensing_stalled"] = 1.0 if sensing_stalled else 0.0
     if median_raw_span < policy.min_raw_span:
         # No response subsumes a coarse one: reporting both would read as two
         # problems when there is one, and the fix for the coarse case (accept a
         # weaker calibration) is wrong for a probe that is simply not in the water.
-        suspicions.append(PlacementSuspicion.NO_RESPONSE)
+        # Unless the electrode has stopped: then this signature has a cause that is
+        # not the placement, and the evidence key above says why nothing was raised.
+        if not sensing_stalled:
+            suspicions.append(PlacementSuspicion.NO_RESPONSE)
     elif median_resolution < policy.min_points_per_reservoir:
         suspicions.append(PlacementSuspicion.COARSE_RESPONSE)
 
