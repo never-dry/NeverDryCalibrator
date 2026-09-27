@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- A static host sets no response headers, so the policy has to be markup.
+     Known limit: frame-ancestors, report-uri and sandbox are ignored when a
+     CSP arrives in a meta tag, so this does not protect against framing. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
+<title>Page not found - NeverDry Calibrator</title>
+<meta name="robots" content="noindex, follow">
+<link rel="icon" href="/NeverDryCalibrator/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/NeverDryCalibrator/apple-touch-icon.png">
+<script src="/NeverDryCalibrator/languages.js"></script>
+<script defer src="/NeverDryCalibrator/lang_list.js"></script>
+<!-- GitHub Pages serves this file at the requested URL, so relative paths would resolve
+     against that path and break on deep URLs: every link and asset here is absolute,
+     and the styles are inline rather than pulled from styles.css. -->
+<style>
+  :root {
+    --accent: #1f6aa5;
+    --accent-light: #d6e8f5;
+    --bg: #f8fafb;
+    --text: #2c3e50;
+    --card-bg: #ffffff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  .hero {
+    background: linear-gradient(135deg, var(--accent), #2980b9);
+    color: #fff;
+    padding: 48px 20px 40px;
+    text-align: center;
+  }
+  .hero .code { font-size: 3.2em; font-weight: 700; line-height: 1; opacity: .85; }
+  .hero h1 { font-size: 1.8em; font-weight: 700; margin: .2em 0 .15em; }
+  .hero p { opacity: .92; max-width: 34rem; margin: 0 auto; }
+  main { flex: 1; }
+  .container { max-width: 640px; margin: 0 auto; padding: 32px 20px 40px; }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--accent-light);
+    border-radius: 10px;
+    padding: 8px 20px;
+  }
+  .card a.row {
+    display: block;
+    padding: 14px 4px;
+    text-decoration: none;
+    color: var(--text);
+    border-bottom: 1px solid var(--accent-light);
+  }
+  .card a.row:last-child { border-bottom: none; }
+  .card a.row:hover { color: var(--accent); }
+  .card .label { font-weight: 600; }
+  .card .desc { font-size: .9em; opacity: .75; }
+  .langs { text-align: center; margin-top: 24px; font-size: .9em; }
+  .langs a { color: var(--accent); text-decoration: none; margin: 0 6px; white-space: nowrap; }
+  .langs a:hover { text-decoration: underline; }
+  footer { text-align: center; padding: 20px; font-size: .85em; opacity: .7; }
+  .site-foot { text-align: center; padding: 16px 20px 24px; }
+  .site-foot .site-provenance { font-size: 0.85em; opacity: 0.7; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="code">404</div>
+  <h1>This page doesn't exist</h1>
+  <p>The link may be outdated, or the address may contain a typo. Everything below still works.</p>
+</div>
+
+<main>
+  <div class="container">
+    <div class="card">
+      <a class="row" href="https://never-dry.github.io/NeverDryCalibrator/">
+        <span class="label">NeverDry Calibrator home</span><br>
+        <span class="desc">What it does, what it refuses to tell you, and how to install it</span>
+      </a>
+      <a class="row" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=never-dry&amp;repository=NeverDryCalibrator&amp;category=integration">
+        <span class="label">Add to HACS</span><br>
+        <span class="desc">Opens HACS in your own Home Assistant</span>
+      </a>
+      <a class="row" href="https://github.com/never-dry/NeverDryCalibrator/blob/main/docs/design/calibration-method.md">
+        <span class="label">How the calibration works</span><br>
+        <span class="desc">The physics, the failure modes and the reasoning behind every threshold</span>
+      </a>
+      <a class="row" href="https://never-dry.github.io/NeverDry/">
+        <span class="label">NeverDry</span><br>
+        <span class="desc">The irrigation side, and a source for the water deficit this needs</span>
+      </a>
+      <a class="row" href="https://github.com/never-dry/NeverDryCalibrator/discussions">
+        <span class="label">Questions and field reports</span><br>
+        <span class="desc">Ask on GitHub Discussions, or open an issue if something is broken</span>
+      </a>
+    </div>
+
+    <div class="langs" data-lang-list></div>
+  </div>
+</main>
+
+<footer class="site-foot">
+  <p class="site-provenance">Last updated {{SITE_UPDATED}} &middot; v{{SITE_VERSION}} &middot; <a href="https://github.com/never-dry/NeverDryCalibrator/tree/main/docs/gh-pages">source</a></p>
+</footer>
+
+<footer>NeverDry Calibrator - MIT License</footer>
+
+</body>
+</html>

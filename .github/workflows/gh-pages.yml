@@ -1,0 +1,73 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/gh-pages/**'
+      - '.github/workflows/gh-pages.yml'
+      - 'scripts/stamp_gh_pages.py'
+      - 'scripts/check_gh_pages.py'
+      - 'scripts/lang_switch_test.js'
+  # A release is the one moment the push trigger cannot cover: tagging a version
+  # touches none of the paths above, so without this the page would go on
+  # announcing whichever version it was last deployed with.
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # The pages carry {{SITE_VERSION}} and {{SITE_UPDATED}} rather than a
+      # version and a date typed by hand, which would be stale by the next
+      # release. Blocking: a page published with the placeholder still in it
+      # would be worse than one with no date at all.
+      - name: Stamp the version and publication date into the pages
+        run: python3 scripts/stamp_gh_pages.py
+
+      # The switch is the one piece of this site that can strand a reader: a
+      # wrong prefix is a 404, and a rule applied in both directions bounces the
+      # browser between two languages. Neither shows up in the markup, so
+      # neither is visible to the consistency check below.
+      - name: Check the language switch behaves
+        run: node scripts/lang_switch_test.js
+
+      # Last gate before the site is public. Dead hreflang targets, a canonical
+      # pointing at the wrong variant, a sitemap listing a redirect: all of them
+      # render perfectly and cost the page its place in the index, so none of
+      # them can be caught by looking at the result.
+      - name: Check the published pages are consistent
+        run: python3 scripts/check_gh_pages.py
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/gh-pages
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

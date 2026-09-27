@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Two URLs and their mutual alternates. Every page listed here must be a page
+  that is served directly: a sitemap entry pointing at a redirect costs the URL
+  its place in the index, and renders perfectly while doing so.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://never-dry.github.io/NeverDryCalibrator/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://never-dry.github.io/NeverDryCalibrator/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://never-dry.github.io/NeverDryCalibrator/it/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://never-dry.github.io/NeverDryCalibrator/"/>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://never-dry.github.io/NeverDryCalibrator/it/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://never-dry.github.io/NeverDryCalibrator/"/>
+    <xhtml:link rel="alternate" hreflang="it" href="https://never-dry.github.io/NeverDryCalibrator/it/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://never-dry.github.io/NeverDryCalibrator/"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>

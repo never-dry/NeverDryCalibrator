@@ -1,0 +1,239 @@
+/* NeverDry landing - shared styles (extracted from inline <style>, 2026-07-29).
+   Single source of truth for the 9 landing pages. */
+:root {
+            --accent: #176b7a;
+            --accent-light: #d5e9ec;
+            --bg: #f8fafb;
+            --text: #2c3e50;
+            --card-bg: #ffffff;
+            --green: #27ae60;
+            --orange: #f39c12;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+            line-height: 1.6;
+        }
+
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, var(--accent), #11525e);
+            color: white;
+            padding: 40px 20px 36px;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 0.15em;
+        }
+        .hero .tagline {
+            font-size: 1.2em;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto 1em;
+        }
+        .hero .badges { margin: 0.8em 0; }
+        .hero .badges img { margin: 0 4px; vertical-align: middle; }
+        .hero .cta {
+            display: inline-block;
+            background: white;
+            color: var(--accent);
+            padding: 12px 32px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin: 0.5em;
+            transition: transform 0.2s;
+        }
+        .hero .cta:hover { transform: translateY(-2px); }
+        .hero .cta.secondary {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
+        /* Content */
+        .container { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+        /* Features */
+        .features {
+            padding: 60px 0;
+        }
+        .features h2 {
+            text-align: center;
+            font-size: 2em;
+            margin-bottom: 1em;
+            color: var(--accent);
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+        .feature-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .feature-card h3 {
+            font-size: 1.2em;
+            margin-bottom: 0.5em;
+            color: var(--accent);
+        }
+        .feature-card .icon {
+            font-size: 2em;
+            margin-bottom: 0.3em;
+        }
+
+        /* How it works */
+        .how-it-works {
+            padding: 60px 0;
+            background: white;
+        }
+        .how-it-works h2 {
+            text-align: center;
+            font-size: 2em;
+            margin-bottom: 0.5em;
+            color: var(--accent);
+        }
+        .how-it-works .formula {
+            text-align: center;
+            font-size: 1.2em;
+            background: var(--accent-light);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 1.5em auto;
+            max-width: 700px;
+            font-family: "Georgia", serif;
+        }
+        .how-it-works p {
+            max-width: 700px;
+            margin: 1em auto;
+            text-align: center;
+        }
+
+        /* Plant families */
+        .families {
+            padding: 60px 0;
+        }
+        .families h2 {
+            text-align: center;
+            font-size: 2em;
+            margin-bottom: 1em;
+            color: var(--accent);
+        }
+        .families table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .families th {
+            background: var(--accent);
+            color: white;
+            padding: 12px 16px;
+            text-align: left;
+        }
+        .families td {
+            padding: 10px 16px;
+            border-bottom: 1px solid #eee;
+        }
+        .families tr:nth-child(even) { background: #f9f9f9; }
+
+        /* Install */
+        .install {
+            padding: 60px 0;
+            background: white;
+        }
+        .install h2 {
+            text-align: center;
+            font-size: 2em;
+            margin-bottom: 1em;
+            color: var(--accent);
+        }
+        .install-steps {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .install-steps ol {
+            padding-left: 1.5em;
+        }
+        .install-steps li {
+            margin-bottom: 0.8em;
+            font-size: 1.05em;
+        }
+        .install-steps code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        /* Support */
+        .support {
+            padding: 60px 0;
+            text-align: center;
+        }
+        .support h2 {
+            font-size: 2em;
+            margin-bottom: 0.5em;
+            color: var(--accent);
+        }
+        .support p {
+            max-width: 500px;
+            margin: 0.5em auto 1.5em;
+        }
+        .support .kofi-btn { display: inline-block; background: #FF5E5B; color: white; padding: 14px 36px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1.1em; transition: transform 0.2s; }
+        .support .kofi-btn:hover { transform: translateY(-2px); }
+        /* Language selector */
+        .lang-bar {
+            background: rgba(0,0,0,0.15);
+            padding: 8px 20px;
+            text-align: right;
+        }
+        .lang-bar a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.85em;
+            margin-left: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .lang-bar a:hover { background: rgba(255,255,255,0.15); }
+        .lang-bar a.active,
+        .lang-bar a[aria-current="true"] {
+            background: rgba(255,255,255,0.25);
+            color: white;
+            font-weight: 600;
+        }
+        /* The switcher is filled in by lang_switch.js once the document is
+           parsed. Reserving the row's height here means the rest of the page
+           does not jump down at that moment, and a reader with JavaScript off
+           sees an empty strip rather than a gap that shifts. */
+        .lang-bar[data-lang-switcher] { min-height: 36px; }
+
+        /* Where the page came from and what it collects: small, last, and on
+           every page, because "reachable from every page" is the requirement. */
+        .site-provenance {
+            margin-top: 0.6em;
+            font-size: 0.85em;
+            opacity: 0.75;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--text);
+            color: rgba(255,255,255,0.7);
+            padding: 30px 20px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        footer a { color: rgba(255,255,255,0.9); }

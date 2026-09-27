@@ -5,6 +5,9 @@
 [![Tests](https://github.com/never-dry/NeverDryCalibrator/actions/workflows/tests.yml/badge.svg)](https://github.com/never-dry/NeverDryCalibrator/actions/workflows/tests.yml)
 [![HACS](https://img.shields.io/badge/HACS-custom%20repository-41BDF5)](https://hacs.xyz/docs/faq/custom_repositories/)
 
+**[never-dry.github.io/NeverDryCalibrator](https://never-dry.github.io/NeverDryCalibrator/)** - the
+short version, in English and Italian, including what this will not tell you.
+
 Turn a cheap capacitive soil probe into a soil moisture sensor you can actually
 use, by calibrating it in place against a water deficit computed by a scientific
 model.

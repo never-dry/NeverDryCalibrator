@@ -1,0 +1,27 @@
+# robots.txt - NeverDry Calibrator landing
+# https://never-dry.github.io/NeverDryCalibrator/
+#
+# Explicit rather than absent, and permissive on purpose. This is a free, open
+# source project that wants to be found and cited, so search crawlers and
+# generative-engine crawlers are both allowed, by name where a name exists.
+
+User-agent: *
+Allow: /
+
+# AI and generative-engine crawlers, allowed deliberately.
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://never-dry.github.io/NeverDryCalibrator/sitemap.xml
