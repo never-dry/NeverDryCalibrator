@@ -107,6 +107,7 @@ installation itself.
 | `sensor.<probe>_complete_cycles` | Cycles that counted as evidence, with the last ten described in the attributes. |
 | `sensor.<probe>_required_depletion` | How dry the soil must get between two irrigations for a cycle to count, in millimetres, with the other derived thresholds and the irrigation threshold of the zone in its attributes. |
 | `sensor.<probe>_calibration_drift` | Recent disagreement between the published line and the reference. The early warning that a probe is ageing. |
+| `sensor.<hub>_probe_spread` | How far apart probes you have declared to share soil currently read, in index points. `unknown` until at least two probes carry the same group label, because probes in different beds are supposed to disagree and averaging them would publish noise. The only number here that is about the instrument rather than the soil. |
 | `binary_sensor.<probe>_probe_online` | Whether the probe's device is still talking. A flat battery keeps publishing the last moisture value forever, so the question is asked of how long since *any* entity of the device spoke, against a bar learned from the probe's own longest silence rather than a constant. Both numbers are in the attributes. |
 | `binary_sensor.<probe>_calibration_problem` | On when the calibration is drifting, invalidated, or the probe is not supplying evidence, whether because the device went quiet or because the electrode stopped answering while the device carried on. The attributes say which. |
 
@@ -377,6 +378,20 @@ Releases are cut by pushing a `v*` tag: the workflow refuses a red build, checks
 that the manifest version matches the tag, packages the integration directory
 into `neverdry_calibrator.zip` and publishes it with the changelog section as
 release notes.
+
+```bash
+# How much do identical probes in one pot of soil disagree? Needs HA_URL and
+# HA_TOKEN; the token is read and never printed.
+python3 scripts/probe_spread.py sensor.probe_a sensor.probe_b sensor.probe_c
+python3 scripts/probe_spread.py --hours 72 --every 300 sensor.probe_a sensor.probe_b
+```
+
+That last one is the cheapest useful experiment this project has, and it needs no
+calibration and no code: whatever probes sharing soil disagree about is neither
+the weather nor the model, it is the instrument, and it bounds what any
+calibration of them can honestly claim. See
+[`docs/design/rfc-001-co-located-probes.md`](docs/design/rfc-001-co-located-probes.md),
+and please report what you find.
 
 ```bash
 python3 scripts/download_counts.py          # per release, with the totals

@@ -4,6 +4,47 @@ All notable changes to this integration are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.5.0 - 2026-09-27
+
+The first number this integration publishes that is about the instrument rather
+than about the soil.
+
+Everything else here measures one probe against a modelled water deficit, and the
+error budget that comes out of it has never had anything measured underneath it.
+Two probes in the same pot answer part of that directly: they share the weather,
+the soil and the model, so whatever they disagree about is the hardware, and that
+disagreement bounds what any calibration of either of them can honestly claim.
+
+The warning of 0.1.0 still stands, and this release is a way of attacking it
+rather than a fix for it: the error budget is argued from soil physics and not yet
+measured against probes in the ground.
+
+### Added
+
+- **A spread entity on the installation**, reporting how far apart probes that
+  share soil currently read, in index points. It names the group that disagrees
+  most, the probes it compared, and the ones it left out with the reason: a
+  reading that is missing, a device that has gone quiet, or an electrode that has
+  stalled. A spread computed over two of five probes and one computed over all
+  five are different claims, and the number alone cannot tell them apart.
+- **A same-soil group on each probe.** Probes given the same label are declared to
+  sit in the same soil, close enough that they should read alike, and only then
+  are they compared. This is the precondition the whole feature rests on and only
+  the owner of the garden knows it: probes in different beds are *supposed* to
+  disagree, and a spread across them would render as a measurement and be noise.
+  Empty by default, so nothing is compared until somebody says so.
+- **`unknown` and never zero when nothing can be compared.** Zero means the probes
+  agree perfectly, which is the most interesting result this can produce; it must
+  not also be what appears when nobody configured anything. The attributes
+  distinguish the two cases, listing both the groups declared and the groups
+  actually compared.
+- **`scripts/probe_spread.py`**, which needs no configuration and no calibration:
+  point it at several probe entities, leave it running, and it writes a CSV and
+  says what the spread was. Readings too old to compare are set aside by name,
+  because a probe that has not reported for an hour is not disagreeing with the
+  others, it is late. Ten minutes gives the disagreement at one moisture level; a
+  run through a whole dry-down gives the transfer function between the probes.
+
 ## 0.4.0 - 2026-09-27
 
 Credit is no longer given to a probe that has stopped working. The mechanism comes

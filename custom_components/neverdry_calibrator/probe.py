@@ -19,6 +19,7 @@ from typing import Any
 
 from .const import (
     CONF_AMBIENT_TEMPERATURE_ENTITY,
+    CONF_COMPARISON_GROUP,
     CONF_DEFICIT_ENTITY,
     CONF_FIELD_CAPACITY,
     CONF_IRRIGATION_ENTITY,
@@ -43,6 +44,9 @@ SOURCE_KEYS: tuple[str, ...] = (
     CONF_IRRIGATION_ENTITY,
     CONF_PROBE_TEMPERATURE_ENTITY,
 )
+
+#: Keys that describe how this probe relates to the others.
+COMPARISON_KEYS: tuple[str, ...] = (CONF_COMPARISON_GROUP,)
 
 #: Keys that describe the reservoir this probe sits in.
 SOIL_KEYS: tuple[str, ...] = (
@@ -104,6 +108,16 @@ class ProbeConfig:
     def probe_temperature_entity(self) -> str | None:
         """The temperature channel acting as liveness sentinel, usually discovered."""
         return self.settings.get(CONF_PROBE_TEMPERATURE_ENTITY)
+
+    @property
+    def comparison_group(self) -> str:
+        """Label of the set of probes this one may be compared with.
+
+        Empty by default, and the default is the safe one: a probe that is not
+        declared to share soil with anything is compared with nothing, so the
+        feature stays silent until somebody states the precondition it rests on.
+        """
+        return str(self.settings.get(CONF_COMPARISON_GROUP, "") or "").strip()
 
     @property
     def sheltered_from_rain(self) -> bool:
