@@ -145,6 +145,12 @@ decides a probe has stopped working, which is the difference between a calibrati
 and a line fitted to a dead instrument:
 [`docs/design/probe-liveness.md`](docs/design/probe-liveness.md).
 
+Open proposals live beside them.
+[`docs/design/rfc-001-co-located-probes.md`](docs/design/rfc-001-co-located-probes.md)
+asks what several identical probes in one pot of soil disagree about, and whether a
+probe that is already trusted could replace the modelled deficit as the reference.
+Its first question needs an afternoon and no code, and answers are wanted.
+
 ## Where to put the probe
 
 Two things decide whether a cheap probe is worth calibrating at all, and neither
