@@ -11,7 +11,8 @@
           "ambient_temperature_entity": "Ambient temperature (optional)",
           "irrigation_entity": "Irrigation valve or switch (optional)",
           "probe_temperature_entity": "Probe temperature (optional, discovered by itself)",
-          "sheltered_from_rain": "Sheltered from rain"
+          "sheltered_from_rain": "Sheltered from rain",
+          "comparison_group": "Same-soil group"
         },
         "data_description": {
           "name": "How this probe will appear: it names its device and its entities.",
@@ -20,7 +21,8 @@
           "ambient_temperature_entity": "Used to refuse samples while the ground is frozen, and as a fallback when the probe reports no temperature of its own.",
           "irrigation_entity": "Improves the timing of the drainage window. Without it, irrigation is inferred from the deficit collapsing.",
           "probe_temperature_entity": "Leave empty unless discovery picks the wrong one. The probe temperature is the sentinel that notices a flat battery.",
-          "sheltered_from_rain": "Tick for a probe under a roof, in a greenhouse or on a covered terrace. The rain gauge is then never applied to it: the sky over the lawn says nothing about soil the rain cannot reach."
+          "sheltered_from_rain": "Tick for a probe under a roof, in a greenhouse or on a covered terrace. The rain gauge is then never applied to it: the sky over the lawn says nothing about soil the rain cannot reach.",
+          "comparison_group": "Probes given the same label here are declared to sit in the same soil, close enough that they should read alike. Only then are they compared with each other, because probes in different beds are supposed to disagree. Leave empty to compare this probe with nothing."
         }
       },
       "soil": {
@@ -104,10 +106,12 @@
           "ambient_temperature_entity": "Ambient temperature (optional)",
           "irrigation_entity": "Irrigation valve or switch (optional)",
           "probe_temperature_entity": "Probe temperature (optional, discovered by itself)",
-          "sheltered_from_rain": "Sheltered from rain"
+          "sheltered_from_rain": "Sheltered from rain",
+          "comparison_group": "Same-soil group"
         },
         "data_description": {
-          "sheltered_from_rain": "Tick for a probe under a roof, in a greenhouse or on a covered terrace. The rain gauge is then never applied to it: the sky over the lawn says nothing about soil the rain cannot reach."
+          "sheltered_from_rain": "Tick for a probe under a roof, in a greenhouse or on a covered terrace. The rain gauge is then never applied to it: the sky over the lawn says nothing about soil the rain cannot reach.",
+          "comparison_group": "Probes given the same label here are declared to sit in the same soil, close enough that they should read alike. Only then are they compared with each other, because probes in different beds are supposed to disagree. Leave empty to compare this probe with nothing."
         }
       },
       "add_probe_soil": {
@@ -138,10 +142,12 @@
           "ambient_temperature_entity": "Ambient temperature (optional)",
           "irrigation_entity": "Irrigation valve or switch (optional)",
           "probe_temperature_entity": "Probe temperature (optional, discovered by itself)",
-          "sheltered_from_rain": "Sheltered from rain"
+          "sheltered_from_rain": "Sheltered from rain",
+          "comparison_group": "Same-soil group"
         },
         "data_description": {
-          "sheltered_from_rain": "Tick for a probe under a roof, in a greenhouse or on a covered terrace. The rain gauge is then never applied to it: the sky over the lawn says nothing about soil the rain cannot reach."
+          "sheltered_from_rain": "Tick for a probe under a roof, in a greenhouse or on a covered terrace. The rain gauge is then never applied to it: the sky over the lawn says nothing about soil the rain cannot reach.",
+          "comparison_group": "Probes given the same label here are declared to sit in the same soil, close enough that they should read alike. Only then are they compared with each other, because probes in different beds are supposed to disagree. Leave empty to compare this probe with nothing."
         }
       },
       "edit_probe_soil": {
@@ -267,6 +273,9 @@
       },
       "required_depletion": {
         "name": "Required depletion"
+      },
+      "probe_spread": {
+        "name": "Probe spread"
       }
     },
     "binary_sensor": {

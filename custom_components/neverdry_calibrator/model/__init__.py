@@ -46,14 +46,15 @@ from .samples import (
     probe_liveness,
 )
 from .soil import SOIL_TEXTURE_DEFAULTS, InvalidSoilProfile, SoilProfile, SoilTexture
+from .spread import Excluded, GroupSpread, ProbeReading, spreads_by_group, worst_spread
 from .units import deficit_to_mm, depth_to_m, raw_index_to_percent, temperature_to_celsius
 
 __all__ = [
     "Admission",
     "AdmissionPolicy",
-    "CADENCE_MEMORY_S",
     "CADENCE_LEARNING_MIN_S",
     "CADENCE_LEARNING_MULTIPLE",
+    "CADENCE_MEMORY_S",
     "CADENCE_TOLERANCE",
     "CalibratedReading",
     "CalibrationFit",
@@ -63,7 +64,9 @@ __all__ = [
     "CyclePolicy",
     "CycleTracker",
     "DryDownCycle",
+    "Excluded",
     "GateVerdict",
+    "GroupSpread",
     "InvalidSoilProfile",
     "InvalidationReason",
     "LIVENESS_CEILING_S",
@@ -75,6 +78,7 @@ __all__ = [
     "PlacementVerdict",
     "ProbeCadence",
     "ProbeLiveness",
+    "ProbeReading",
     "QualityGates",
     "RainPolicy",
     "RainSensorKind",
@@ -97,7 +101,9 @@ __all__ = [
     "line_summary",
     "probe_liveness",
     "raw_index_to_percent",
+    "spreads_by_group",
     "temperature_to_celsius",
     "theil_sen",
     "two_point_line",
+    "worst_spread",
 ]

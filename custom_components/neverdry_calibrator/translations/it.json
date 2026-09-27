@@ -11,7 +11,8 @@
           "ambient_temperature_entity": "Temperatura ambiente (opzionale)",
           "irrigation_entity": "Valvola o interruttore di irrigazione (opzionale)",
           "probe_temperature_entity": "Temperatura della sonda (opzionale, viene scoperta da sola)",
-          "sheltered_from_rain": "Al riparo dalla pioggia"
+          "sheltered_from_rain": "Al riparo dalla pioggia",
+          "comparison_group": "Gruppo di terreno comune"
         },
         "data_description": {
           "name": "Come comparira' questa sonda: da' il nome al suo dispositivo e alle sue entita'.",
@@ -20,7 +21,8 @@
           "ambient_temperature_entity": "Serve a rifiutare i campioni con terreno gelato e come ripiego quando la sonda non pubblica una propria temperatura.",
           "irrigation_entity": "Migliora la tempistica della finestra di drenaggio. Senza, l'irrigazione viene dedotta dal crollo del deficit.",
           "probe_temperature_entity": "Lascia vuoto a meno che la scoperta automatica non scelga quella sbagliata. La temperatura della sonda e' la sentinella che si accorge della batteria scarica.",
-          "sheltered_from_rain": "Spunta per una sonda sotto una tettoia, in serra o su un terrazzo coperto. Il pluviometro non le viene mai applicato: il cielo sopra il prato non dice niente su un terreno che la pioggia non raggiunge."
+          "sheltered_from_rain": "Spunta per una sonda sotto una tettoia, in serra o su un terrazzo coperto. Il pluviometro non le viene mai applicato: il cielo sopra il prato non dice niente su un terreno che la pioggia non raggiunge.",
+          "comparison_group": "Le sonde a cui dai la stessa etichetta sono dichiarate nello stesso terreno, abbastanza vicine da dover leggere uguale. Solo allora vengono confrontate fra loro, perche' sonde in aiuole diverse devono leggere diverso. Lascia vuoto per non confrontare questa sonda con niente."
         }
       },
       "soil": {
@@ -104,10 +106,12 @@
           "ambient_temperature_entity": "Temperatura ambiente (opzionale)",
           "irrigation_entity": "Valvola o interruttore di irrigazione (opzionale)",
           "probe_temperature_entity": "Temperatura della sonda (opzionale, viene scoperta da sola)",
-          "sheltered_from_rain": "Al riparo dalla pioggia"
+          "sheltered_from_rain": "Al riparo dalla pioggia",
+          "comparison_group": "Gruppo di terreno comune"
         },
         "data_description": {
-          "sheltered_from_rain": "Spunta per una sonda sotto una tettoia, in serra o su un terrazzo coperto. Il pluviometro non le viene mai applicato: il cielo sopra il prato non dice niente su un terreno che la pioggia non raggiunge."
+          "sheltered_from_rain": "Spunta per una sonda sotto una tettoia, in serra o su un terrazzo coperto. Il pluviometro non le viene mai applicato: il cielo sopra il prato non dice niente su un terreno che la pioggia non raggiunge.",
+          "comparison_group": "Le sonde a cui dai la stessa etichetta sono dichiarate nello stesso terreno, abbastanza vicine da dover leggere uguale. Solo allora vengono confrontate fra loro, perche' sonde in aiuole diverse devono leggere diverso. Lascia vuoto per non confrontare questa sonda con niente."
         }
       },
       "add_probe_soil": {
@@ -138,10 +142,12 @@
           "ambient_temperature_entity": "Temperatura ambiente (opzionale)",
           "irrigation_entity": "Valvola o interruttore di irrigazione (opzionale)",
           "probe_temperature_entity": "Temperatura della sonda (opzionale, viene scoperta da sola)",
-          "sheltered_from_rain": "Al riparo dalla pioggia"
+          "sheltered_from_rain": "Al riparo dalla pioggia",
+          "comparison_group": "Gruppo di terreno comune"
         },
         "data_description": {
-          "sheltered_from_rain": "Spunta per una sonda sotto una tettoia, in serra o su un terrazzo coperto. Il pluviometro non le viene mai applicato: il cielo sopra il prato non dice niente su un terreno che la pioggia non raggiunge."
+          "sheltered_from_rain": "Spunta per una sonda sotto una tettoia, in serra o su un terrazzo coperto. Il pluviometro non le viene mai applicato: il cielo sopra il prato non dice niente su un terreno che la pioggia non raggiunge.",
+          "comparison_group": "Le sonde a cui dai la stessa etichetta sono dichiarate nello stesso terreno, abbastanza vicine da dover leggere uguale. Solo allora vengono confrontate fra loro, perche' sonde in aiuole diverse devono leggere diverso. Lascia vuoto per non confrontare questa sonda con niente."
         }
       },
       "edit_probe_soil": {
@@ -267,6 +273,9 @@
       },
       "required_depletion": {
         "name": "Escursione minima richiesta"
+      },
+      "probe_spread": {
+        "name": "Dispersione fra sonde"
       }
     },
     "binary_sensor": {

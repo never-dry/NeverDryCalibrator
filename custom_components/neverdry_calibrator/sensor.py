@@ -24,7 +24,14 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .const import DOMAIN
 from .coordinator import CalibrationCoordinator
 from .entity import CalibratorEntity, hub_device_info
-from .model import CalibrationStatus, PlacementConfidence
+from .model import (
+    CalibrationStatus,
+    PlacementConfidence,
+    ProbeLiveness,
+    ProbeReading,
+    spreads_by_group,
+    worst_spread,
+)
 
 
 async def async_setup_entry(
@@ -34,7 +41,10 @@ async def async_setup_entry(
 ) -> None:
     """Create the calibrated sensor and the diagnostics of every configured probe."""
     runtime: dict[str, CalibrationCoordinator] = hass.data[DOMAIN][entry.entry_id]
-    entities: list[SensorEntity] = [InstallationSummarySensor(entry, runtime)]
+    entities: list[SensorEntity] = [
+        InstallationSummarySensor(entry, runtime),
+        ProbeSpreadSensor(entry, runtime),
+    ]
     for coordinator in runtime.values():
         entities.extend(
             [
@@ -105,6 +115,92 @@ class InstallationSummarySensor(SensorEntity):
                 }
                 for coordinator in self._runtime.values()
             },
+        }
+
+
+class ProbeSpreadSensor(SensorEntity):
+    """How far apart probes that share soil currently read, in index points.
+
+    The second entity that belongs to the hub rather than to a probe, and the
+    only number this integration publishes that is about the *instrument* rather
+    than about the soil. Two probes in one pot share the weather, the soil and
+    the model, so whatever they disagree about is the hardware, and that
+    disagreement is a bound: no calibration of either can honestly resolve better
+    than the distance between them.
+
+    ``unknown`` and not zero when nothing can be compared. Zero would be the most
+    interesting result this entity can produce, and it must not be the value it
+    shows when nobody has declared which probes share soil. The declaration is
+    the precondition the whole number rests on: probes in different beds are
+    supposed to disagree, and averaging them would publish noise that looks like
+    a measurement.
+    """
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = PERCENTAGE
+
+    def __init__(self, entry: ConfigEntry, runtime: dict[str, CalibrationCoordinator]) -> None:
+        """Watch every probe of the entry, and compare the ones declared comparable."""
+        self._entry = entry
+        self._runtime = runtime
+        self._attr_name = "Probe spread"
+        self._attr_unique_id = f"{entry.entry_id}_probe_spread"
+        self._attr_translation_key = "probe_spread"
+        self._attr_device_info = hub_device_info(entry)
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to every probe: any of them moving changes the comparison."""
+        await super().async_added_to_hass()
+        for coordinator in self._runtime.values():
+            self.async_on_remove(coordinator.async_add_listener(self.async_write_ha_state))
+
+    def _readings(self) -> list[ProbeReading]:
+        """What each probe contributes, with the reasons it might not.
+
+        A probe whose device has gone quiet is marked unfresh rather than dropped
+        here, so the domain can say *why* a group shrank instead of silently
+        comparing whoever is left.
+        """
+        readings: list[ProbeReading] = []
+        for coordinator in self._runtime.values():
+            data = coordinator.data
+            readings.append(
+                ProbeReading(
+                    probe_id=coordinator.probe.probe_id,
+                    name=coordinator.probe.name,
+                    group=coordinator.probe.comparison_group,
+                    raw_percent=data.raw_percent if data else None,
+                    fresh=data.liveness is not ProbeLiveness.STALE if data else False,
+                    sensing_stalled=data.sensing_stalled if data else False,
+                )
+            )
+        return readings
+
+    @property
+    def native_value(self) -> float | None:
+        """The widest disagreement among the declared groups, or ``None``."""
+        worst = worst_spread(spreads_by_group(self._readings()))
+        return round(worst.spread, 2) if worst else None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Every group, what it was computed over, and who was left out and why."""
+        readings = self._readings()
+        spreads = spreads_by_group(readings)
+        worst = worst_spread(spreads)
+        declared = sorted({r.group for r in readings if r.group})
+        return {
+            # Both counts, because "no groups declared" and "groups declared but
+            # nothing comparable right now" are different situations that produce
+            # the same unknown state.
+            "groups_declared": declared,
+            "groups_compared": [s.group for s in spreads],
+            "probes_without_group": sorted(r.name for r in readings if not r.group),
+            "widest_group": worst.group if worst else None,
+            "detail": [s.to_dict() for s in spreads],
         }
 
 

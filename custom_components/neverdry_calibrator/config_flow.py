@@ -25,6 +25,7 @@ from homeassistant.helpers import selector
 from .const import (
     CONF_ALLOW_DEVICE_WRITEBACK,
     CONF_AMBIENT_TEMPERATURE_ENTITY,
+    CONF_COMPARISON_GROUP,
     CONF_DEFICIT_ENTITY,
     CONF_DRAINAGE_MINUTES,
     CONF_FIELD_CAPACITY,
@@ -130,6 +131,14 @@ def _probe_schema(defaults: dict[str, Any]) -> vol.Schema:
                 CONF_SHELTERED_FROM_RAIN,
                 default=defaults.get(CONF_SHELTERED_FROM_RAIN, False),
             ): selector.BooleanSelector(),
+            # Free text and not a dropdown of existing groups: the first probe of
+            # a group has to be able to name one that does not exist yet, and a
+            # dropdown cannot offer it. Empty is the default and means this probe
+            # is compared with nothing.
+            vol.Optional(
+                CONF_COMPARISON_GROUP,
+                description={"suggested_value": defaults.get(CONF_COMPARISON_GROUP)},
+            ): selector.TextSelector(),
         }
     )
 

@@ -28,6 +28,12 @@ CONF_IRRIGATION_ENTITY = "irrigation_entity"
 CONF_PROBE_TEMPERATURE_ENTITY = "probe_temperature_entity"
 CONF_BATTERY_ENTITY = "battery_entity"
 CONF_DEVICE_CALIBRATION_ENTITIES = "device_calibration_entities"
+#: Probes that share this label are declared to be in the SAME soil, close
+#: enough that they should read the same thing. Only then are they compared with
+#: each other: two probes in different beds are supposed to disagree, and a
+#: spread computed across them is noise wearing the clothes of a measurement.
+#: Empty by default, which means this probe is compared with nothing.
+CONF_COMPARISON_GROUP = "comparison_group"
 #: Whether this probe is under a roof. A sheltered probe is never told about
 #: rain: the gauge on the lawn says nothing about a pot on a covered terrace,
 #: and crediting it there would close cycles that never happened.
