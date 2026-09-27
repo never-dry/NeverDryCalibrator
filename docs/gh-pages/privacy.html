@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- A static host sets no response headers, so the policy has to be markup.
+         Known limit: frame-ancestors, report-uri and sandbox are ignored when a
+         CSP arrives in a meta tag, so this does not protect against framing. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://hub.vemetric.com; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
+    <!-- Analytics, served from our own origin: see vendor/README.md. This page
+         is counted like any other: a privacy page that quietly opted itself out
+         of the measurement it describes would be describing a different site. -->
+    <script src="/NeverDryCalibrator/vendor/vemetric-init.js"></script>
+    <script defer src="/NeverDryCalibrator/vendor/vemetric-main.js" id="vmtrc-scr" data-token="kWxWHG8vfMvXQEwT"></script>
+    <title>Privacy - NeverDry Calibrator</title>
+    <!-- No language switch here on purpose. This page exists only in English,
+         and the switch may only ever send a reader to a translation that is
+         actually published: loading it would offer eight addresses that are not
+         there. English is what a missing translation looks like. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/NeverDryCalibrator/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/NeverDryCalibrator/favicon-16x16.png">
+    <link rel="icon" href="/NeverDryCalibrator/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/NeverDryCalibrator/apple-touch-icon.png">
+    <meta name="description" content="What the NeverDry Calibrator website measures, which third parties see your IP address, and what the integration itself does with your data: nothing leaves your home.">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://never-dry.github.io/NeverDryCalibrator/privacy.html">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="NeverDry Calibrator">
+    <meta property="og:title" content="Privacy - NeverDry Calibrator">
+    <meta property="og:description" content="What the NeverDry Calibrator website measures, which third parties see your IP address, and what the integration itself does with your data: nothing leaves your home.">
+    <meta property="og:url" content="https://never-dry.github.io/NeverDryCalibrator/privacy.html">
+    <meta property="og:image" content="https://never-dry.github.io/NeverDryCalibrator/social-card.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="NeverDry Calibrator - make a cheap soil probe readable">
+    <meta property="og:locale" content="en_US">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Privacy - NeverDry Calibrator">
+    <meta name="twitter:description" content="What the NeverDry Calibrator website measures, which third parties see your IP address, and what the integration itself does with your data: nothing leaves your home.">
+    <meta name="twitter:image" content="https://never-dry.github.io/NeverDryCalibrator/social-card.png">
+    <link rel="stylesheet" href="/NeverDryCalibrator/styles.css">
+    <style>
+        .doc { max-width: 720px; margin: 0 auto; padding: 40px 20px 60px; }
+        .doc h2 { margin-top: 1.6em; margin-bottom: 0.4em; font-size: 1.35em; }
+        .doc p, .doc li { color: #4a5b6b; }
+        .doc ul { margin: 0.6em 0 0.6em 1.2em; }
+        .doc li { margin-bottom: 0.4em; }
+        .doc table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.92em; }
+        .doc th, .doc td { border: 1px solid #dde4ea; padding: 8px 10px; text-align: left; vertical-align: top; }
+        .doc th { background: var(--accent-light); }
+        .doc .updated { font-size: 0.9em; opacity: 0.75; }
+    </style>
+</head>
+<body>
+
+<section class="hero" style="padding: 32px 20px 28px;">
+    <h1 style="font-size: 2em;">Privacy</h1>
+    <p class="tagline" style="font-size: 1.05em;">What this website measures, and what the integration does not.</p>
+</section>
+
+<main class="doc">
+
+    <p class="updated">This page exists in English only. Last updated {{SITE_UPDATED}}.</p>
+
+    <h2>The short version</h2>
+    <p>This website counts visits so that its author knows whether anyone is reading it. It sets no cookies, asks for nothing and has no way to identify you. The NeverDry Calibrator integration itself, the thing that calibrates your probe, sends nothing anywhere: it runs inside your own Home Assistant and has no server to phone home to.</p>
+
+    <h2>What this website collects</h2>
+    <p>Page visits are counted with <a href="https://vemetric.com" target="_blank" rel="noopener noreferrer">Vemetric</a>, a European analytics service. The script that does the counting is served from this site rather than from the vendor's content delivery network, so loading a page does not by itself announce you to anyone else. When it records a visit it sends an event to <code>hub.vemetric.com</code>, and at that moment that service does see the IP address your browser is connecting from.</p>
+    <ul>
+        <li><strong>No cookies are set.</strong> Vemetric only stores cookies when explicitly told to, and it is not told to here. There is nothing to consent to, which is why this site shows you no banner.</li>
+        <li><strong>What is recorded:</strong> which page was viewed, roughly where in the world the request came from, the kind of browser and device, and which site referred you. Clicks on the install button and on outbound links are counted as events.</li>
+        <li><strong>What is not recorded:</strong> anything that identifies you personally. There is no account, no login, no profile and no cross-site tracking.</li>
+    </ul>
+
+    <h2>Third parties your browser contacts</h2>
+    <p>A page that loads something from somebody else's server hands that server your IP address, whether or not anything is written down. These are all of them on this site:</p>
+    <table>
+        <tr><th>Who</th><th>What for</th><th>On which pages</th></tr>
+        <tr><td><code>hub.vemetric.com</code></td><td>Receives the visit and event counts described above</td><td>All</td></tr>
+        <tr><td><code>img.shields.io</code></td><td>Renders the status badges (version, downloads, build)</td><td>The landing pages</td></tr>
+        <tr><td><code>raw.githubusercontent.com</code></td><td>Serves the product logo</td><td>The landing pages</td></tr>
+        <tr><td><code>my.home-assistant.io</code></td><td>Serves the button that opens HACS in your own Home Assistant</td><td>The landing pages</td></tr>
+        <tr><td><code>github.com</code></td><td>Hosts this site, and therefore sees the request for every page</td><td>All</td></tr>
+    </table>
+    <p>Nothing else is loaded from anywhere else: the fonts are the ones already on your device and no video, map or screenshot is embedded.</p>
+
+    <h2>What the integration does with your data</h2>
+    <p>This is the part most people are actually asking about. NeverDry Calibrator is an integration that runs inside your Home Assistant installation. It reads the probe and the water deficit you point it at, stores the samples it admits, and writes its own state back into Home Assistant. Those samples are the whole history of your soil and they never leave your machine: there is no backend, no telemetry and no update channel of its own. The author has no way of seeing any of it, not even in aggregate.</p>
+    <p>Two exceptions worth naming, and both are things you choose to do. A diagnostics download contains your configuration, every collected sample and every refusal, and you are the one who sends it, to a GitHub issue you can read before posting. The same is true of a field report: this project asks people to say how a calibration went, and whatever you decide to put in that post is public because you posted it.</p>
+
+    <h2>Who is responsible, and how to reach them</h2>
+    <p>NeverDry Calibrator is a free, open-source hobby project maintained by <a href="https://github.com/drake69" target="_blank" rel="noopener noreferrer">drake69</a>. Questions about this page, or a request to have something clarified or removed, are best raised in the project's <a href="https://github.com/never-dry/NeverDryCalibrator/discussions" target="_blank" rel="noopener noreferrer">GitHub Discussions</a> or as a <a href="https://github.com/never-dry/NeverDryCalibrator/issues" target="_blank" rel="noopener noreferrer">GitHub issue</a>, both of which are read by the maintainer.</p>
+
+    <h2>Changes to this page</h2>
+    <p>This page is part of the website's source code and changes with it, in public: its history is the repository's history. The date at the top is the date this site was last published.</p>
+
+    <p style="margin-top: 2em;"><a href="/NeverDryCalibrator/">&larr; Back to NeverDry Calibrator</a></p>
+
+</main>
+
+<footer>
+    <p>NeverDry Calibrator - MIT License - Made with 🌱 by <a href="https://github.com/drake69">drake69</a></p>
+    <p class="site-provenance"><a href="/NeverDryCalibrator/privacy.html">Privacy</a> (EN) &middot; Last updated {{SITE_UPDATED}} &middot; v{{SITE_VERSION}} &middot; <a href="https://github.com/never-dry/NeverDryCalibrator/tree/main/docs/gh-pages">source</a></p>
+</footer>
+
+</body>
+</html>
