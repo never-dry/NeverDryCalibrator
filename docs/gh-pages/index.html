@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- A static host sets no response headers, so the policy has to be markup.
+         Known limit: frame-ancestors, report-uri and sandbox are ignored when a
+         CSP arrives in a meta tag, so this does not protect against framing.
+         No analytics here and therefore no connect-src: nothing on this page
+         calls anywhere, which is also why it needs no privacy page. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com https://img.shields.io https://my.home-assistant.io; connect-src 'none'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
+    <title>NeverDry Calibrator - Make a Cheap Soil Probe Readable</title>
+    <!-- Language map and switch, in <head> so nobody sees a flash of the wrong
+         language. Without JavaScript the reader stays on English, which is the
+         correct answer and not a degraded one. -->
+    <script src="/NeverDryCalibrator/languages.js"></script>
+    <script src="/NeverDryCalibrator/lang_switch.js"></script>
+    <link rel="icon" type="image/png" sizes="32x32" href="/NeverDryCalibrator/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/NeverDryCalibrator/favicon-16x16.png">
+    <link rel="icon" href="/NeverDryCalibrator/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/NeverDryCalibrator/apple-touch-icon.png">
+    <meta name="description" content="NeverDry Calibrator turns the arbitrary 0 to 100 index of a cheap capacitive soil probe into volumetric water content, and publishes nothing until the calibration has earned it. Free, installed via HACS.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://never-dry.github.io/NeverDryCalibrator/">
+    <link rel="alternate" hreflang="en" href="https://never-dry.github.io/NeverDryCalibrator/">
+    <link rel="alternate" hreflang="it" href="https://never-dry.github.io/NeverDryCalibrator/it/">
+    <link rel="alternate" hreflang="x-default" href="https://never-dry.github.io/NeverDryCalibrator/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="NeverDry Calibrator - Make a Cheap Soil Probe Readable">
+    <meta property="og:description" content="A 15 euro soil probe publishes a number between 0 and 100 that is not a percentage of anything. This calibrates it against a water balance, and refuses to publish until it has earned the right.">
+    <meta property="og:url" content="https://never-dry.github.io/NeverDryCalibrator/">
+    <meta property="og:image" content="https://never-dry.github.io/NeverDryCalibrator/social-card.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="stylesheet" href="/NeverDryCalibrator/styles.css">
+</head>
+<body>
+
+<!-- Language selector -->
+<nav class="lang-bar" style="background: var(--accent);"
+     data-lang-switcher aria-label="Language"></nav>
+
+<!-- Hero -->
+<section class="hero">
+    <img src="https://raw.githubusercontent.com/never-dry/NeverDryCalibrator/main/custom_components/neverdry_calibrator/brand/icon.png" alt="NeverDry Calibrator" width="84" height="84" style="margin-bottom: 0.1em;">
+    <h1>NeverDry Calibrator</h1>
+    <p class="tagline">A cheap soil probe publishes a number between 0 and 100 that is not a percentage of anything. This turns it into water content you can act on, and says nothing until it can.</p>
+    <div class="badges">
+        <img src="https://img.shields.io/github/v/release/never-dry/NeverDryCalibrator?sort=semver&amp;style=flat-square" alt="Release" width="102" height="20">
+        <img src="https://img.shields.io/github/actions/workflow/status/never-dry/NeverDryCalibrator/tests.yml?label=tests&amp;style=flat-square" alt="Tests" width="94" height="20">
+        <img src="https://img.shields.io/badge/HACS-custom%20repository-41BDF5?style=flat-square" alt="HACS custom repository" width="166" height="20">
+    </div>
+    <a class="cta" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=never-dry&amp;repository=NeverDryCalibrator&amp;category=integration"
+       style="font-size: 1.2em; padding: 14px 40px;">Add to HACS</a>
+    <div style="margin-top: 0.6em; font-size: 0.9em; opacity: 0.8;">Custom repository, not yet in the HACS default store.</div>
+
+    <div style="margin-top: 1.3em; display: flex; flex-wrap: wrap; gap: 0.6em 1.6em; justify-content: center; font-size: 1.05em; line-height: 1.35;">
+        <div>📐&nbsp;&nbsp;Calibrates against a water balance</div>
+        <div>🤐&nbsp;&nbsp;Publishes nothing until it has earned it</div>
+        <div>🩺&nbsp;&nbsp;Tells you when the probe itself is the problem</div>
+    </div>
+
+    <div style="margin-top: 1.6em;">
+        <a class="cta secondary" href="https://github.com/never-dry/NeverDryCalibrator">GitHub</a>
+        <a class="cta secondary" href="https://github.com/never-dry/NeverDryCalibrator/blob/main/docs/design/calibration-method.md">How it works</a>
+    </div>
+</section>
+
+<!-- The problem -->
+<section class="features">
+    <div class="container">
+        <h2>What is actually wrong with a cheap probe</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>The scale is arbitrary</h3>
+                <p>The 0 to 100 index is the oscillator output rescaled between two factory endpoints, usually air and water. Neither endpoint is your soil, so 40 does not mean forty percent of anything.</p>
+            </div>
+            <div class="feature-card">
+                <h3>The relation is site-specific</h3>
+                <p>Bulk density, texture and organic content all shift the reading for the same water content. A number that is right in sand is wrong in clay, and no factory calibration knows which you have.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Installation dominates everything</h3>
+                <p>An air gap along the electrode, a stone, or a probe above the root zone changes the answer more than soil type, temperature and salinity put together.</p>
+            </div>
+        </div>
+        <p style="max-width: 760px; margin: 2em auto 0; text-align: center;">What the index <em>is</em>, honestly stated: a monotone, short-term-stable, site-specific ordinal signal. That is exactly enough to calibrate, and nowhere near enough to read as a percentage.</p>
+    </div>
+</section>
+
+<!-- Honesty -->
+<section class="how-it-works">
+    <div class="container">
+        <h2>What it will not tell you</h2>
+        <p style="max-width: 760px; margin: 0 auto 1.4em;">This is the part most worth reading before installing, so it is not at the bottom of the page.</p>
+        <ul style="max-width: 760px; margin: 0 auto; line-height: 1.9;">
+            <li><strong>Nothing at all, until the calibration has earned it.</strong> While the evidence is short the calibrated entity stays <code>unknown</code>. A provisional value improved over time was considered and rejected: downstream there is an irrigation controller that cannot tell a provisional number from a settled one.</li>
+            <li><strong>Not a laboratory measurement.</strong> The reference is a modelled water balance, not a gravimetric sample. The calibration can only be as good as the deficit it is taught against.</li>
+            <li><strong>An error budget that is argued, not yet measured.</strong> It is derived from soil physics and from the resolution of the instrument. It has not yet been checked against probes in the ground with an independent gravimetric control. Three probes are collecting for exactly that reason.</li>
+            <li><strong>Placement thresholds that advise and never gate.</strong> The diagnostic can name six ways a probe looks wrongly sited, and its thresholds are argued rather than measured against probes whose position is independently known. So it describes; it never withholds a reading.</li>
+        </ul>
+    </div>
+</section>
+
+<!-- How it works -->
+<section class="features">
+    <div class="container">
+        <h2>How it earns the number</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>The cycle is the unit of evidence</h3>
+                <p>Not the sample. One irrigation to one dry-down is one experiment, with a wet anchor at field capacity after drainage and a dry anchor at the deepest depletion reached. Five complete cycles by default.</p>
+            </div>
+            <div class="feature-card">
+                <h3>A robust line, not a least-squares one</h3>
+                <p>Theil-Sen over the pairwise slopes, with an optional thermal term. A single bad afternoon moves a least-squares fit; it does not move a median of slopes.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Admission decides everything</h3>
+                <p>Readings during irrigation, inside the drainage window, while it rains, on frozen soil or from a stale deficit never become samples. Every refusal is named and counted, so a probe that never calibrates can say why.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Gates before publication</h3>
+                <p>Enough cycles, enough samples, a real span of the probe's range, a monotone relation and a bounded residual. Miss one and nothing is published.</p>
+            </div>
+            <div class="feature-card">
+                <h3>It watches itself afterwards</h3>
+                <p>Recent disagreement between the published line and the reference is reported as drift, which is the early warning that a probe is ageing. Turning a calibration knob on the device invalidates the history, because after that the index means something else.</p>
+            </div>
+            <div class="feature-card">
+                <h3>It refuses to learn from a dead probe</h3>
+                <p>A probe with a flat battery keeps publishing its last reading for ever. Silence is judged against the probe's own observed cadence rather than a fixed timeout, and a reading that stands still while the soil demonstrably dries is caught as a stopped sensing element, not mistaken for bad placement.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Requirements -->
+<section class="install">
+    <div class="container">
+        <h2>What you need</h2>
+        <div class="install-steps">
+            <p><strong>A cheap capacitive soil probe</strong> already in Home Assistant, publishing an index between 0 and 100. Most Zigbee and ESPHome soil sensors qualify. Its temperature channel, battery and device-side calibration knobs are discovered on their own.</p>
+            <p><strong>A water deficit sensor in millimetres or inches.</strong> This is the reference the probe is taught against. Any water balance model will do; <a href="https://never-dry.github.io/NeverDry/">NeverDry</a> produces one.</p>
+            <p><strong>A soil description.</strong> Texture from a dropdown and root depth, or your own field capacity and wilting point if you have measured them.</p>
+            <p><strong>Patience.</strong> Five complete irrigation cycles is roughly three weeks on a garden bed. There is no way to shorten that which is not a lie about the evidence.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Install -->
+<section class="how-it-works">
+    <div class="container">
+        <h2>Installation</h2>
+        <div class="install-steps">
+            <p><strong>1.</strong> In HACS, open the three dot menu and choose <em>Custom repositories</em>.</p>
+            <p><strong>2.</strong> Paste <code>https://github.com/never-dry/NeverDryCalibrator</code> with category <em>Integration</em>.</p>
+            <p><strong>3.</strong> Download it from the card that appears, then restart Home Assistant.</p>
+            <p><strong>4.</strong> Add the integration, then add one probe per pair of probe and deficit sensor.</p>
+        </div>
+        <p style="text-align: center; margin-top: 1.5em;">
+            <a class="cta" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=never-dry&amp;repository=NeverDryCalibrator&amp;category=integration">Add to HACS</a>
+        </p>
+    </div>
+</section>
+
+<!-- The ask: field feedback -->
+<section class="support" style="background: #f8f8f8;">
+    <div class="container" style="max-width: 760px;">
+        <h2>Help measure it</h2>
+        <p>This is the thing the project actually needs, and it is worth more than a star.</p>
+        <p>The error budget is argued from physics and the thresholds are argued from how each failure looks. Turning any of that from argued into measured takes probes in real ground, in soils that are not the author's, reported by the people who own them. If you have a cheap probe and a water balance, run it for a few cycles and say what came out: which soil, which probe, whether it reached <code>calibrated</code>, what the placement diagnostic said, and whether the published number matched anything you could check independently.</p>
+        <p>A negative result is as useful as a positive one. A probe that never calibrates and names the reason it kept refusing is a bug report about the thresholds, which is precisely what is missing.</p>
+        <div style="display: flex; gap: 1em; justify-content: center; flex-wrap: wrap; margin-top: 1.5em;">
+            <a class="kofi-btn" style="background: var(--accent);" href="https://github.com/never-dry/NeverDryCalibrator/discussions/new?category=show-and-tell">Report what happened</a>
+            <a class="kofi-btn" style="background: #24292e;" href="https://github.com/never-dry/NeverDryCalibrator/discussions/new?category=q-a">Ask a question</a>
+        </div>
+        <p style="margin-top: 1.2em; font-size: 0.9em; opacity: 0.8;">Something broken rather than unclear? <a href="https://github.com/never-dry/NeverDryCalibrator/issues">Open an issue</a>. The diagnostics download carries the samples, the cycles and every refusal, which is usually the whole answer.</p>
+    </div>
+</section>
+
+<!-- Support -->
+<section class="support">
+    <h2>Support the Project</h2>
+    <p>NeverDry Calibrator is free and open source - the other way to support it is to star it and spread the word:</p>
+    <div style="display: flex; gap: 1em; justify-content: center; flex-wrap: wrap;">
+        <a class="kofi-btn" style="background: #24292e;" href="https://github.com/never-dry/NeverDryCalibrator/stargazers">&#11088; Star on GitHub</a>
+    </div>
+    <p style="margin-top: 1.8em; margin-bottom: 0.8em; opacity: 0.8;">Know someone running a cheap soil sensor they do not quite trust? Spread the word:</p>
+    <div style="display: flex; gap: 0.8em; justify-content: center; flex-wrap: wrap;">
+        <a class="kofi-btn" style="background: #1877F2; padding: 10px 22px; font-size: 1em;" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fnever-dry.github.io%2FNeverDryCalibrator%2F" target="_blank" rel="noopener">Share on Facebook</a>
+        <a class="kofi-btn" style="background: #FF4500; padding: 10px 22px; font-size: 1em;" href="https://www.reddit.com/submit?url=https%3A%2F%2Fnever-dry.github.io%2FNeverDryCalibrator%2F&amp;title=NeverDry%20Calibrator%20-%20turn%20a%20cheap%20soil%20probe%20into%20a%20reading%20you%20can%20use%20(Home%20Assistant)" target="_blank" rel="noopener">Share on Reddit</a>
+        <a class="kofi-btn" style="background: #111111; padding: 10px 22px; font-size: 1em;" href="https://twitter.com/intent/tweet?text=NeverDry%20Calibrator%20-%20turn%20a%20cheap%20soil%20probe%20into%20a%20reading%20you%20can%20use&amp;url=https%3A%2F%2Fnever-dry.github.io%2FNeverDryCalibrator%2F" target="_blank" rel="noopener">Share on X</a>
+    </div>
+</section>
+
+<!-- The pair -->
+<section class="how-it-works" style="background: #fff;">
+    <div class="container" style="max-width: 760px;">
+        <h2>Two halves of one problem</h2>
+        <p><a href="https://never-dry.github.io/NeverDry/">NeverDry</a> decides when and how long to water, from a FAO-56 water balance, and makes sure the valve always closes. It produces the deficit this project needs.</p>
+        <p>NeverDry Calibrator goes the other way: it takes that deficit as a reference and teaches a cheap probe what its own numbers mean, so the measurement in the ground and the model on the wall finally speak the same units.</p>
+        <p>Either works on its own. Together the model gets a witness and the probe gets a scale.</p>
+        <p style="text-align: center; margin-top: 1.5em;">
+            <a class="cta secondary" href="https://never-dry.github.io/NeverDry/">Visit NeverDry</a>
+        </p>
+    </div>
+</section>
+
+<!-- Disclaimer & Credits -->
+<section class="support" style="background: #f0f0f0; padding: 40px 0;">
+    <div class="container" style="text-align: left; max-width: 700px;">
+        <h2 style="text-align: center;">Disclaimer</h2>
+        <p style="font-size: 0.9em; color: #555;">NeverDry Calibrator is a hobby project for residential use. It is not certified for agricultural, commercial, or safety-critical applications. The declared error budget is argued from soil physics and has not yet been verified against probes in the ground with an independent control. Do not use the published figure where being wrong is expensive. The authors accept no liability for any damage or loss.</p>
+
+        <h2 style="text-align: center; margin-top: 2em;">Acknowledgments</h2>
+        <p style="font-size: 0.9em; color: #555;">Developed by <a href="https://github.com/drake69">drake69</a> with AI assistance (<a href="https://claude.ai">Claude</a> by Anthropic).</p>
+
+        <h2 style="text-align: center; margin-top: 2em;">Method and References</h2>
+        <p style="font-size: 0.9em; color: #555;">The reasoning behind every threshold, the alternatives rejected and what remains wrong are written out in the repository: <a href="https://github.com/never-dry/NeverDryCalibrator/blob/main/docs/design/calibration-method.md">the calibration method</a> and <a href="https://github.com/never-dry/NeverDryCalibrator/blob/main/docs/design/probe-liveness.md">how a dead probe is detected</a>.</p>
+        <ul style="font-size: 0.85em; color: #555; line-height: 1.8;">
+            <li>Topp, G.C., Davis, J.L. &amp; Annan, A.P. (1980). Electromagnetic determination of soil water content. <em>Water Resources Research.</em> <a href="https://doi.org/10.1029/WR016i003p00574">DOI: 10.1029/WR016i003p00574</a></li>
+            <li>Theil, H. (1950). A rank-invariant method of linear and polynomial regression analysis. <em>Proc. Koninklijke Nederlandse Akademie van Wetenschappen.</em></li>
+            <li>Sen, P.K. (1968). Estimates of the regression coefficient based on Kendall's tau. <em>Journal of the American Statistical Association.</em> <a href="https://doi.org/10.1080/01621459.1968.10480934">DOI: 10.1080/01621459.1968.10480934</a></li>
+            <li>Allen, R.G. et al. (1998). <em>Crop evapotranspiration.</em> <a href="https://www.fao.org/4/x0490e/x0490e00.htm">FAO Irrigation and Drainage Paper 56</a>.</li>
+        </ul>
+    </div>
+</section>
+
+<footer>
+    <p>MIT licensed. Built for Home Assistant.</p>
+    <p class="site-provenance">Last updated {{SITE_UPDATED}} &middot; v{{SITE_VERSION}} &middot; <a href="https://github.com/never-dry/NeverDryCalibrator/tree/main/docs/gh-pages">source</a></p>
+</footer>
+
+</body>
+</html>

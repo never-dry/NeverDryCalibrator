@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Un host statico non imposta header di risposta, quindi la policy deve
+         stare nel markup. Limite noto: frame-ancestors, report-uri e sandbox
+         vengono ignorati quando la CSP arriva in un meta tag, quindi questa non
+         protegge dal framing. Nessuna analitica qui e percio' nessun
+         connect-src: niente in questa pagina chiama da qualche parte, che e'
+         anche il motivo per cui non serve una pagina sulla privacy. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://raw.githubusercontent.com https://img.shields.io https://my.home-assistant.io; connect-src 'none'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
+    <title>NeverDry Calibrator - Rendere Leggibile una Sonda Economica</title>
+    <script src="/NeverDryCalibrator/languages.js"></script>
+    <script src="/NeverDryCalibrator/lang_switch.js"></script>
+    <link rel="icon" type="image/png" sizes="32x32" href="/NeverDryCalibrator/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/NeverDryCalibrator/favicon-16x16.png">
+    <link rel="icon" href="/NeverDryCalibrator/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/NeverDryCalibrator/apple-touch-icon.png">
+    <meta name="description" content="NeverDry Calibrator trasforma l'indice arbitrario da 0 a 100 di una sonda di umidita' economica in contenuto d'acqua volumetrico, e non pubblica niente finche' la calibrazione non se l'e' guadagnata. Gratuito, si installa via HACS.">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <link rel="canonical" href="https://never-dry.github.io/NeverDryCalibrator/it/">
+    <link rel="alternate" hreflang="en" href="https://never-dry.github.io/NeverDryCalibrator/">
+    <link rel="alternate" hreflang="it" href="https://never-dry.github.io/NeverDryCalibrator/it/">
+    <link rel="alternate" hreflang="x-default" href="https://never-dry.github.io/NeverDryCalibrator/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="NeverDry Calibrator - Rendere Leggibile una Sonda Economica">
+    <meta property="og:description" content="Una sonda da 15 euro pubblica un numero fra 0 e 100 che non e' la percentuale di niente. Questo lo calibra contro un bilancio idrico, e si rifiuta di pubblicare finche' non se l'e' guadagnato.">
+    <meta property="og:url" content="https://never-dry.github.io/NeverDryCalibrator/it/">
+    <meta property="og:image" content="https://never-dry.github.io/NeverDryCalibrator/social-card.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="stylesheet" href="/NeverDryCalibrator/styles.css">
+</head>
+<body>
+
+<!-- Selettore lingua -->
+<nav class="lang-bar" style="background: var(--accent);"
+     data-lang-switcher aria-label="Lingua"></nav>
+
+<!-- Hero -->
+<section class="hero">
+    <img src="https://raw.githubusercontent.com/never-dry/NeverDryCalibrator/main/custom_components/neverdry_calibrator/brand/icon.png" alt="NeverDry Calibrator" width="84" height="84" style="margin-bottom: 0.1em;">
+    <h1>NeverDry Calibrator</h1>
+    <p class="tagline">Una sonda di umidita' economica pubblica un numero fra 0 e 100 che non e' la percentuale di niente. Questo lo trasforma in contenuto d'acqua su cui puoi agire, e tace finche' non e' in grado di farlo.</p>
+    <div class="badges">
+        <img src="https://img.shields.io/github/v/release/never-dry/NeverDryCalibrator?sort=semver&amp;style=flat-square" alt="Release" width="102" height="20">
+        <img src="https://img.shields.io/github/actions/workflow/status/never-dry/NeverDryCalibrator/tests.yml?label=tests&amp;style=flat-square" alt="Test" width="94" height="20">
+        <img src="https://img.shields.io/badge/HACS-custom%20repository-41BDF5?style=flat-square" alt="HACS custom repository" width="166" height="20">
+    </div>
+    <a class="cta" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=never-dry&amp;repository=NeverDryCalibrator&amp;category=integration"
+       style="font-size: 1.2em; padding: 14px 40px;">Aggiungi a HACS</a>
+    <div style="margin-top: 0.6em; font-size: 0.9em; opacity: 0.8;">Repository personalizzato, non ancora nello store predefinito di HACS.</div>
+
+    <div style="margin-top: 1.3em; display: flex; flex-wrap: wrap; gap: 0.6em 1.6em; justify-content: center; font-size: 1.05em; line-height: 1.35;">
+        <div>📐&nbsp;&nbsp;Calibra contro un bilancio idrico</div>
+        <div>🤐&nbsp;&nbsp;Non pubblica niente finche' non se l'e' guadagnato</div>
+        <div>🩺&nbsp;&nbsp;Ti dice quando il problema e' la sonda stessa</div>
+    </div>
+
+    <div style="margin-top: 1.6em;">
+        <a class="cta secondary" href="https://github.com/never-dry/NeverDryCalibrator">GitHub</a>
+        <a class="cta secondary" href="https://github.com/never-dry/NeverDryCalibrator/blob/main/docs/design/calibration-method.md">Come funziona</a>
+    </div>
+</section>
+
+<!-- Il problema -->
+<section class="features">
+    <div class="container">
+        <h2>Cosa non va davvero in una sonda economica</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>La scala e' arbitraria</h3>
+                <p>L'indice da 0 a 100 e' l'uscita dell'oscillatore riscalata fra due estremi di fabbrica, di solito aria e acqua. Nessuno dei due e' il tuo terreno, quindi 40 non e' il quaranta per cento di niente.</p>
+            </div>
+            <div class="feature-card">
+                <h3>La relazione dipende dal sito</h3>
+                <p>Densita' apparente, tessitura e contenuto organico spostano tutti la lettura a parita' di acqua. Un numero giusto nella sabbia e' sbagliato nell'argilla, e nessuna calibrazione di fabbrica sa quale hai.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Il posizionamento conta piu' di tutto</h3>
+                <p>Un'intercapedine d'aria lungo l'elettrodo, un sasso, o una sonda sopra la zona radicale cambiano la risposta piu' di tessitura, temperatura e salinita' messe insieme.</p>
+            </div>
+        </div>
+        <p style="max-width: 760px; margin: 2em auto 0; text-align: center;">Cosa <em>e'</em> l'indice, detto onestamente: un segnale ordinale monotono, stabile nel breve periodo e specifico del sito. Esattamente quanto basta per calibrare, e molto meno di quanto serve per leggerlo come una percentuale.</p>
+    </div>
+</section>
+
+<!-- Onesta' -->
+<section class="how-it-works">
+    <div class="container">
+        <h2>Cosa non ti dira'</h2>
+        <p style="max-width: 760px; margin: 0 auto 1.4em;">E' la parte che conviene di piu' leggere prima di installare, quindi non sta in fondo alla pagina.</p>
+        <ul style="max-width: 760px; margin: 0 auto; line-height: 1.9;">
+            <li><strong>Niente del tutto, finche' la calibrazione non se l'e' guadagnato.</strong> Finche' le prove sono poche l'entita' calibrata resta <code>unknown</code>. Un valore provvisorio migliorato nel tempo e' stato considerato e scartato: a valle c'e' un controllore di irrigazione che non puo' distinguere un numero provvisorio da uno definitivo.</li>
+            <li><strong>Non una misura di laboratorio.</strong> Il riferimento e' un bilancio idrico modellato, non un campione gravimetrico. La calibrazione puo' essere buona solo quanto il deficit contro cui e' stata insegnata.</li>
+            <li><strong>Un budget di errore argomentato, non ancora misurato.</strong> Deriva dalla fisica del suolo e dalla risoluzione dello strumento. Non e' ancora stato verificato su sonde in terra con un controllo gravimetrico indipendente. Tre sonde stanno raccogliendo esattamente per questo.</li>
+            <li><strong>Soglie di posizionamento che consigliano e non sbarrano mai.</strong> La diagnostica sa nominare sei modi in cui una sonda sembra mal collocata, e le sue soglie sono argomentate e non misurate su sonde di cui si conosca la posizione in modo indipendente. Quindi descrive; non trattiene mai una lettura.</li>
+        </ul>
+    </div>
+</section>
+
+<!-- Come funziona -->
+<section class="features">
+    <div class="container">
+        <h2>Come si guadagna il numero</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>L'unita' di prova e' il ciclo</h3>
+                <p>Non il campione. Un'irrigazione fino a un'asciugatura e' un esperimento, con un'ancora umida alla capacita' di campo dopo il drenaggio e una secca alla deplezione piu' profonda raggiunta. Cinque cicli completi per impostazione predefinita.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Una retta robusta, non ai minimi quadrati</h3>
+                <p>Theil-Sen sulla mediana delle pendenze a coppie, con un termine termico opzionale. Un solo pomeriggio storto sposta una regressione ai minimi quadrati; non sposta una mediana di pendenze.</p>
+            </div>
+            <div class="feature-card">
+                <h3>L'ammissione decide tutto</h3>
+                <p>Le letture durante l'irrigazione, dentro la finestra di drenaggio, mentre piove, su terreno gelato o da un deficit vecchio non diventano mai campioni. Ogni rifiuto e' nominato e contato, cosi' una sonda che non calibra mai puo' dire perche'.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Cancelli prima della pubblicazione</h3>
+                <p>Abbastanza cicli, abbastanza campioni, un'escursione vera dell'intervallo della sonda, una relazione monotona e un residuo limitato. Se ne manca uno, non viene pubblicato niente.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Si sorveglia da sola</h3>
+                <p>Il disaccordo recente fra la retta pubblicata e il riferimento viene riportato come deriva, che e' l'avviso precoce che una sonda sta invecchiando. Girare una manopola di calibrazione sul dispositivo invalida la storia, perche' da quel momento l'indice significa altro.</p>
+            </div>
+            <div class="feature-card">
+                <h3>Si rifiuta di imparare da una sonda morta</h3>
+                <p>Una sonda con la batteria scarica continua a pubblicare per sempre la sua ultima lettura. Il silenzio e' giudicato contro la cadenza osservata della sonda stessa invece che contro un timeout fisso, e una lettura ferma mentre il terreno si asciuga in modo dimostrabile viene colta come elemento sensibile fermo, non scambiata per un posizionamento sbagliato.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Requisiti -->
+<section class="install">
+    <div class="container">
+        <h2>Cosa ti serve</h2>
+        <div class="install-steps">
+            <p><strong>Una sonda di umidita' capacitiva economica</strong> gia' in Home Assistant, che pubblichi un indice fra 0 e 100. Vanno bene quasi tutti i sensori Zigbee ed ESPHome. Il canale temperatura, la batteria e le manopole di calibrazione del dispositivo vengono scoperti da soli.</p>
+            <p><strong>Un sensore di deficit idrico in millimetri o pollici.</strong> E' il riferimento contro cui la sonda viene insegnata. Va bene qualunque modello di bilancio idrico; <a href="https://never-dry.github.io/NeverDry/">NeverDry</a> ne produce uno.</p>
+            <p><strong>Una descrizione del terreno.</strong> Tessitura da una tendina e profondita' radicale, oppure capacita' di campo e punto di appassimento tuoi se li hai misurati.</p>
+            <p><strong>Pazienza.</strong> Cinque cicli di irrigazione completi sono circa tre settimane su un'aiuola. Non esiste un modo di accorciarle che non sia una bugia sulle prove raccolte.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Installazione -->
+<section class="how-it-works">
+    <div class="container">
+        <h2>Installazione</h2>
+        <div class="install-steps">
+            <p><strong>1.</strong> In HACS apri il menu a tre punti e scegli <em>Repository personalizzati</em>.</p>
+            <p><strong>2.</strong> Incolla <code>https://github.com/never-dry/NeverDryCalibrator</code> con categoria <em>Integrazione</em>.</p>
+            <p><strong>3.</strong> Scaricalo dalla scheda che compare, poi riavvia Home Assistant.</p>
+            <p><strong>4.</strong> Aggiungi l'integrazione, poi aggiungi una sonda per ogni coppia di sonda e sensore di deficit.</p>
+        </div>
+        <p style="text-align: center; margin-top: 1.5em;">
+            <a class="cta" href="https://my.home-assistant.io/redirect/hacs_repository/?owner=never-dry&amp;repository=NeverDryCalibrator&amp;category=integration">Aggiungi a HACS</a>
+        </p>
+    </div>
+</section>
+
+<!-- La richiesta: riscontro dal campo -->
+<section class="support" style="background: #f8f8f8;">
+    <div class="container" style="max-width: 760px;">
+        <h2>Aiuta a misurarlo</h2>
+        <p>E' la cosa di cui il progetto ha davvero bisogno, e vale piu' di una stella.</p>
+        <p>Il budget di errore e' argomentato dalla fisica e le soglie sono argomentate da come si presenta ciascun guasto. Trasformare tutto questo da argomentato a misurato richiede sonde in terra vera, in terreni che non sono quelli dell'autore, raccontate da chi le possiede. Se hai una sonda economica e un bilancio idrico, falla girare per qualche ciclo e racconta cosa e' uscito: che terreno, che sonda, se e' arrivata a <code>calibrated</code>, cosa ha detto la diagnostica di posizionamento, e se il numero pubblicato corrispondeva a qualcosa che hai potuto verificare in modo indipendente.</p>
+        <p>Un risultato negativo vale quanto uno positivo. Una sonda che non calibra mai e nomina la ragione per cui ha continuato a rifiutare e' una segnalazione sulle soglie, che e' precisamente quello che manca.</p>
+        <div style="display: flex; gap: 1em; justify-content: center; flex-wrap: wrap; margin-top: 1.5em;">
+            <a class="kofi-btn" style="background: var(--accent);" href="https://github.com/never-dry/NeverDryCalibrator/discussions/new?category=show-and-tell">Racconta com'e' andata</a>
+            <a class="kofi-btn" style="background: #24292e;" href="https://github.com/never-dry/NeverDryCalibrator/discussions/new?category=q-a">Fai una domanda</a>
+        </div>
+        <p style="margin-top: 1.2em; font-size: 0.9em; opacity: 0.8;">Qualcosa di rotto e non solo poco chiaro? <a href="https://github.com/never-dry/NeverDryCalibrator/issues">Apri una issue</a>. Il download della diagnostica porta con se' i campioni, i cicli e ogni rifiuto, che di solito e' tutta la risposta.</p>
+    </div>
+</section>
+
+<!-- Supporto -->
+<section class="support">
+    <h2>Sostieni il progetto</h2>
+    <p>NeverDry Calibrator e' gratuito e open source - l'altro modo di sostenerlo e' mettere una stella e farlo conoscere:</p>
+    <div style="display: flex; gap: 1em; justify-content: center; flex-wrap: wrap;">
+        <a class="kofi-btn" style="background: #24292e;" href="https://github.com/never-dry/NeverDryCalibrator/stargazers">&#11088; Stella su GitHub</a>
+    </div>
+    <p style="margin-top: 1.8em; margin-bottom: 0.8em; opacity: 0.8;">Conosci qualcuno con un sensore di umidita' economico di cui non si fida del tutto? Fallo sapere:</p>
+    <div style="display: flex; gap: 0.8em; justify-content: center; flex-wrap: wrap;">
+        <a class="kofi-btn" style="background: #1877F2; padding: 10px 22px; font-size: 1em;" href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fnever-dry.github.io%2FNeverDryCalibrator%2Fit%2F" target="_blank" rel="noopener">Condividi su Facebook</a>
+        <a class="kofi-btn" style="background: #FF4500; padding: 10px 22px; font-size: 1em;" href="https://www.reddit.com/submit?url=https%3A%2F%2Fnever-dry.github.io%2FNeverDryCalibrator%2F&amp;title=NeverDry%20Calibrator%20-%20turn%20a%20cheap%20soil%20probe%20into%20a%20reading%20you%20can%20use%20(Home%20Assistant)" target="_blank" rel="noopener">Condividi su Reddit</a>
+        <a class="kofi-btn" style="background: #111111; padding: 10px 22px; font-size: 1em;" href="https://twitter.com/intent/tweet?text=NeverDry%20Calibrator%20-%20rendere%20leggibile%20una%20sonda%20di%20umidita%27%20economica&amp;url=https%3A%2F%2Fnever-dry.github.io%2FNeverDryCalibrator%2Fit%2F" target="_blank" rel="noopener">Condividi su X</a>
+    </div>
+</section>
+
+<!-- La coppia -->
+<section class="how-it-works" style="background: #fff;">
+    <div class="container" style="max-width: 760px;">
+        <h2>Due meta' dello stesso problema</h2>
+        <p><a href="https://never-dry.github.io/NeverDry/">NeverDry</a> decide quando e quanto irrigare, a partire da un bilancio idrico FAO-56, e si assicura che la valvola si chiuda sempre. Produce il deficit di cui questo progetto ha bisogno.</p>
+        <p>NeverDry Calibrator fa il percorso inverso: prende quel deficit come riferimento e insegna a una sonda economica cosa significano i suoi stessi numeri, cosi' la misura in terra e il modello sul muro parlano finalmente nelle stesse unita'.</p>
+        <p>Ciascuno funziona da solo. Insieme, il modello ottiene un testimone e la sonda ottiene una scala.</p>
+        <p style="text-align: center; margin-top: 1.5em;">
+            <a class="cta secondary" href="https://never-dry.github.io/NeverDry/">Vai a NeverDry</a>
+        </p>
+    </div>
+</section>
+
+<!-- Avvertenze e crediti -->
+<section class="support" style="background: #f0f0f0; padding: 40px 0;">
+    <div class="container" style="text-align: left; max-width: 700px;">
+        <h2 style="text-align: center;">Avvertenze</h2>
+        <p style="font-size: 0.9em; color: #555;">NeverDry Calibrator e' un progetto hobbistico per uso residenziale. Non e' certificato per applicazioni agricole, commerciali o critiche per la sicurezza. Il budget di errore dichiarato e' argomentato dalla fisica del suolo e non e' ancora stato verificato su sonde in terra con un controllo indipendente. Non usare il valore pubblicato dove sbagliare costa caro. Gli autori non accettano alcuna responsabilita' per danni o perdite.</p>
+
+        <h2 style="text-align: center; margin-top: 2em;">Riconoscimenti</h2>
+        <p style="font-size: 0.9em; color: #555;">Sviluppato da <a href="https://github.com/drake69">drake69</a> con il supporto di <a href="https://claude.ai">Claude</a> di <a href="https://anthropic.com">Anthropic</a>.</p>
+
+        <h2 style="text-align: center; margin-top: 2em;">Metodo e riferimenti</h2>
+        <p style="font-size: 0.9em; color: #555;">Il ragionamento dietro ogni soglia, le alternative scartate e cio' che resta sbagliato sono scritti nel repository: <a href="https://github.com/never-dry/NeverDryCalibrator/blob/main/docs/design/calibration-method.md">il metodo di calibrazione</a> e <a href="https://github.com/never-dry/NeverDryCalibrator/blob/main/docs/design/probe-liveness.md">come si riconosce una sonda morta</a>. I documenti sono in inglese.</p>
+        <ul style="font-size: 0.85em; color: #555; line-height: 1.8;">
+            <li>Topp, G.C., Davis, J.L. &amp; Annan, A.P. (1980). Electromagnetic determination of soil water content. <em>Water Resources Research.</em> <a href="https://doi.org/10.1029/WR016i003p00574">DOI: 10.1029/WR016i003p00574</a></li>
+            <li>Theil, H. (1950). A rank-invariant method of linear and polynomial regression analysis. <em>Proc. Koninklijke Nederlandse Akademie van Wetenschappen.</em></li>
+            <li>Sen, P.K. (1968). Estimates of the regression coefficient based on Kendall's tau. <em>Journal of the American Statistical Association.</em> <a href="https://doi.org/10.1080/01621459.1968.10480934">DOI: 10.1080/01621459.1968.10480934</a></li>
+            <li>Allen, R.G. et al. (1998). <em>Crop evapotranspiration.</em> <a href="https://www.fao.org/4/x0490e/x0490e00.htm">FAO Irrigation and Drainage Paper 56</a>.</li>
+        </ul>
+    </div>
+</section>
+
+<footer>
+    <p>Licenza MIT. Costruito per Home Assistant.</p>
+    <p class="site-provenance">Ultimo aggiornamento {{SITE_UPDATED}} &middot; v{{SITE_VERSION}} &middot; <a href="https://github.com/never-dry/NeverDryCalibrator/tree/main/docs/gh-pages">sorgente</a></p>
+</footer>
+
+</body>
+</html>
