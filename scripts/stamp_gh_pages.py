@@ -39,6 +39,7 @@ PLACEHOLDERS = ("{{SITE_VERSION}}", "{{SITE_UPDATED}}")
 
 
 def integration_version() -> str:
+    """The version the pages will announce, read from the integration manifest."""
     return json.loads(MANIFEST.read_text(encoding="utf-8"))["version"]
 
 
@@ -77,6 +78,7 @@ def published_on() -> str:
 
 
 def main() -> int:
+    """Fill both placeholders in every page and return a shell exit status."""
     version = integration_version()
     updated = published_on()
     values = {"{{SITE_VERSION}}": version, "{{SITE_UPDATED}}": updated}

@@ -52,9 +52,11 @@ class Report:
     """Collected complaints, so one run names every problem it can see."""
 
     def __init__(self) -> None:
+        """Start with nothing found wrong."""
         self.problems: list[str] = []
 
     def fail(self, where: Path | str, what: str) -> None:
+        """Record one problem, naming the file it is in and what is wrong with it."""
         name = where.relative_to(PAGES) if isinstance(where, Path) else where
         self.problems.append(f"{name}: {what}")
 
@@ -81,15 +83,22 @@ def local_path(url: str) -> Path | None:
 
 
 def declared_languages() -> dict[str, str]:
+    """The language code to display name map, read from the single declaration."""
     source = (PAGES / "languages.js").read_text(encoding="utf-8")
     return dict(LANG_ENTRY.findall(source))
 
 
 def is_redirect(text: str) -> bool:
+    """Whether a page only bounces the reader somewhere else.
+
+    A redirect is a legitimate page and an illegitimate sitemap entry, which is
+    the distinction the caller needs.
+    """
     return bool(REFRESH.search(text))
 
 
 def check_page(page: Path, text: str, languages: dict[str, str], report: Report) -> None:
+    """Check one page's canonical, its hreflang set and the targets they point at."""
     leftovers = PLACEHOLDER.findall(text)
     if leftovers:
         report.fail(page, f"unfilled placeholder {sorted(set(leftovers))} - was the site stamped?")
@@ -144,6 +153,7 @@ def check_page(page: Path, text: str, languages: dict[str, str], report: Report)
 
 
 def check_sitemap(languages: dict[str, str], report: Report) -> None:
+    """Check every sitemap entry is a page that exists and is served directly."""
     sitemap = PAGES / "sitemap.xml"
     if not sitemap.exists():
         report.fail("sitemap.xml", "missing")
@@ -225,6 +235,7 @@ def check_shipped_files(report: Report) -> None:
 
 
 def check_languages(languages: dict[str, str], report: Report) -> None:
+    """Check every declared language has the page it promises."""
     if not languages:
         report.fail("languages.js", "declares no languages")
         return
@@ -279,6 +290,7 @@ def check_untranslated_text(languages: dict[str, str], report: Report) -> None:
 
 
 def main() -> int:
+    """Run every check and return a shell exit status."""
     report = Report()
     languages = declared_languages()
     check_languages(languages, report)
