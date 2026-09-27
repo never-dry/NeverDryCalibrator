@@ -176,12 +176,14 @@
           "min_sample_interval_s": "Minimum interval between samples",
           "drainage_minutes": "Drainage window after irrigation",
           "probe_timeout_s": "Probe considered offline after",
-          "min_soil_temperature_c": "Refuse samples below this soil temperature"
+          "min_soil_temperature_c": "Refuse samples below this soil temperature",
+          "min_battery_percent": "Refuse samples below this battery level"
         },
         "data_description": {
           "drainage_minutes": "Time the wetting front needs to redistribute. Readings inside this window describe water in transit, not what the root zone keeps.",
-          "probe_timeout_s": "How long the probe temperature may be silent before the probe is treated as dead, typically a flat battery.",
-          "min_soil_temperature_c": "Frozen water does not behave like liquid water in a capacitive reading."
+          "probe_timeout_s": "Fallback only, used until the probe has shown a cadence of its own: after three silences it has come back from, the bar becomes its own longest silence instead of this number.",
+          "min_soil_temperature_c": "Frozen water does not behave like liquid water in a capacitive reading.",
+          "min_battery_percent": "A probe with a dying battery keeps publishing, and its excitation voltage sags, which moves the index without the soil moving. Zero turns the check off, for a device that reports a battery level it invented."
         }
       },
       "gates": {
@@ -360,6 +362,10 @@
     "placement_outside_wetted_bulb": {
       "title": "{probe} fills up when it rains and not when the zone is watered",
       "description": "Across {rain_cycles} cycles opened by rain and {irrigation_cycles} opened by the irrigation, field capacity read {wet_anchor_gap} index points higher after rain than after watering. Both numbers describe the same soil state: a cycle only opens once the water balance says the profile is nearly full, so what differs is the probe's answer, not the water.\n\nRain falls on every square centimetre. A dripper wets a bulb around itself, and a probe outside that bulb is watered only by the weather. This is the one failure a single probe cannot diagnose on its own, and the rain gauge is what makes it visible.\n\nMove {probe} to about half the wetted radius from an emitter: 8 to 12 cm on sand, 12 to 20 cm on loam, 20 to 30 cm on clay. Never directly under the emitter. Then reset its calibration: the samples collected so far describe the old position."
+    },
+    "probe_sensing_stalled": {
+      "title": "{probe} has stopped measuring, but is still reporting",
+      "description": "The device of {probe} is talking normally, and the index published by {moisture_entity} has not moved while the soil dried by {travel} mm, against the {required} mm at which a working probe must respond. Battery: {battery}.\n\nThis is not a placement problem. A probe in a bad position still follows the soil, only weakly; one that does not move at all while an independent account of the same soil says the water is leaving has stopped sensing. Worth checking in this order: the battery, the contacts and the electrode for corrosion, then water inside the housing.\n\nSamples are being refused in the meantime, so no calibration is being built on the frozen readings. Once the probe is repaired or replaced, reset the calibration of {probe}: what was collected before describes a different instrument."
     }
   },
   "exceptions": {

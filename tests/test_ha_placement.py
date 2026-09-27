@@ -14,7 +14,7 @@ import pytest
 
 pytest.importorskip("pytest_homeassistant_custom_component")
 
-from helpers import run_cycles  # noqa: E402
+from helpers import run_cycles, weakly_responding_probe  # noqa: E402
 from homeassistant.helpers import issue_registry as ir  # noqa: E402
 from homeassistant.util import dt as dt_util  # noqa: E402
 from pytest_homeassistant_custom_component.common import MockConfigEntry  # noqa: E402
@@ -28,9 +28,14 @@ from custom_components.neverdry_calibrator.model import PlacementSuspicion  # no
 
 PLACEMENT_ENTITY = "sensor.ortensia_probe_placement"
 
-#: A probe that publishes the same index whatever the soil does, which is what a
-#: probe outside the wetted volume looks like from here.
-FLAT_PROBE = lambda soil, deficit, temperature, noise: 50.0 + noise * 0.05  # noqa: E731
+#: A probe that follows the soil far too weakly, which is what a probe outside the
+#: wetted volume looks like from here.
+#:
+#: Weakly and not not-at-all, and the difference is load-bearing. A probe whose
+#: index does not move at all is claimed by the stalled-electrode witness instead,
+#: which withholds this signature on purpose: see ``test_ha_liveness.py``. Using a
+#: motionless probe here would leave these tests passing for the wrong reason.
+FLAT_PROBE = weakly_responding_probe
 
 
 async def _setup(hass):

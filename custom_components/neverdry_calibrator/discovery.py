@@ -45,6 +45,16 @@ class CompanionEntities:
     device_id: str | None = None
     probe_temperature: str | None = None
     battery: str | None = None
+    #: Every entity of the probe's device, the moisture one included.
+    #:
+    #: The liveness sentinel reads this and not the temperature channel alone. Any
+    #: of them reporting proves the device is on the mesh, and none of them is
+    #: inspected for what it says: a probe that publishes its temperature nineteen
+    #: times across a night while its moisture entity publishes once has never
+    #: stopped talking, and judging it on the moisture entity calls it dead for
+    #: reporting the same number twice. Empty when the entity belongs to no
+    #: device, which is the normal case for a template sensor.
+    device_entities: tuple[str, ...] = field(default_factory=tuple)
     temperature_calibration: str | None = None
     humidity_calibration: str | None = None
     soil_calibration: str | None = None
@@ -85,6 +95,7 @@ class CompanionEntities:
             "humidity_calibration": self.humidity_calibration,
             "soil_calibration": self.soil_calibration,
             "other_calibration": list(self.other_calibration),
+            "device_entities": list(self.device_entities),
         }
 
     @classmethod
@@ -100,6 +111,7 @@ class CompanionEntities:
             humidity_calibration=data.get("humidity_calibration"),
             soil_calibration=data.get("soil_calibration"),
             other_calibration=tuple(data.get("other_calibration", [])),
+            device_entities=tuple(data.get("device_entities", [])),
         )
 
 
@@ -140,7 +152,11 @@ def discover_companions(hass: HomeAssistant, moisture_entity_id: str) -> Compani
     registry = er.async_get(hass)
     source = registry.async_get(moisture_entity_id)
     if source is None or source.device_id is None:
-        return CompanionEntities()
+        # No device to walk, so the moisture entity is the only witness there is.
+        # Returned rather than left empty: it makes the liveness check fall back to
+        # exactly the behaviour it had before it learned about devices, instead of
+        # silently having no sentinel at all.
+        return CompanionEntities(device_entities=(moisture_entity_id,))
 
     probe_temperature: str | None = None
     battery: str | None = None
@@ -149,7 +165,10 @@ def discover_companions(hass: HomeAssistant, moisture_entity_id: str) -> Compani
     soil_calibration: str | None = None
     others: list[str] = []
 
-    for entry in er.async_entries_for_device(registry, source.device_id, include_disabled_entities=False):
+    siblings = er.async_entries_for_device(registry, source.device_id, include_disabled_entities=False)
+    device_entities = tuple(entry.entity_id for entry in siblings) or (moisture_entity_id,)
+
+    for entry in siblings:
         if entry.entity_id == moisture_entity_id:
             continue
         domain = entry.entity_id.split(".", 1)[0]
@@ -182,6 +201,7 @@ def discover_companions(hass: HomeAssistant, moisture_entity_id: str) -> Compani
         humidity_calibration=humidity_calibration,
         soil_calibration=soil_calibration,
         other_calibration=tuple(others),
+        device_entities=device_entities,
     )
 
 

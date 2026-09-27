@@ -20,6 +20,7 @@ from .const import (
     CONF_IRRIGATION_DROP_FRACTION,
     CONF_MAX_DEFICIT_AGE,
     CONF_MAX_RMSE_FRACTION,
+    CONF_MIN_BATTERY_PERCENT,
     CONF_MIN_CYCLE_SPAN_FRACTION,
     CONF_MIN_CYCLES,
     CONF_MIN_R_SQUARED,
@@ -118,6 +119,7 @@ def admission_policy(settings: Mapping[str, Any]) -> AdmissionPolicy:
             "require_probe_temperature": settings.get(
                 CONF_REQUIRE_PROBE_TEMPERATURE, AdmissionPolicy().require_probe_temperature
             ),
+            "min_battery_percent": settings.get(CONF_MIN_BATTERY_PERCENT, AdmissionPolicy().min_battery_percent),
         }
     )
 

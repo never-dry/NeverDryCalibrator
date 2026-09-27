@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 
+from .liveness import ProbeCadence
 from .soil import SoilProfile
 
 
@@ -31,6 +32,16 @@ class RejectionReason(StrEnum):
 
     PROBE_UNAVAILABLE = "probe_unavailable"
     PROBE_STALE = "probe_stale"
+    #: The device is talking and the electrode is not: see
+    #: :class:`~.liveness.SensingWitness`. Its own reason rather than
+    #: ``PROBE_STALE`` because the two need opposite repairs, and because a user
+    #: told "stopped reporting" about a probe that is visibly reporting stops
+    #: believing the diagnostic.
+    PROBE_SENSING_STALLED = "probe_sensing_stalled"
+    #: The battery is low enough that the readings are no longer evidence. Refused
+    #: rather than warned about, because a calibration built across a dying
+    #: battery cannot be separated afterwards into the part that was sound.
+    BATTERY_CRITICAL = "battery_critical"
     RAW_OUT_OF_RANGE = "raw_out_of_range"
     DEFICIT_UNAVAILABLE = "deficit_unavailable"
     DEFICIT_STALE = "deficit_stale"
@@ -44,14 +55,23 @@ class RejectionReason(StrEnum):
 
 
 class ProbeLiveness(StrEnum):
-    """What the temperature sentinel says about the probe being alive.
+    """Whether the probe's device is still talking, judged against its own cadence.
 
     A cheap probe with a flat battery does not disappear from Home Assistant, it
-    keeps reporting its last moisture value forever. The temperature channel of
-    the same device is the cheapest sentinel available: it moves every day by
-    several degrees, so a temperature that has not changed or not arrived within
-    the timeout means the device stopped talking, whatever the moisture entity
-    still shows.
+    keeps reporting its last moisture value forever. So the question is asked of
+    the *age* of the newest word from the device, and it is asked of the **whole
+    device** rather than of one channel: any entity of it reporting proves the
+    device is on the mesh, and none of them is inspected for what it says. An
+    unchanged moisture reading from a device that is demonstrably alive is not
+    missing evidence, it is the device stating that the soil has not moved.
+
+    The temperature channel remains the fallback for the case where the device
+    cannot be resolved at all, which is what a template sensor or a hand-built
+    helper looks like from here.
+
+    ``UNKNOWN`` is returned when neither is available. That is not a failure, it
+    is a missing sentinel, and the difference matters: an unknown liveness must
+    never make a working probe look dead.
     """
 
     ALIVE = "alive"
@@ -73,9 +93,15 @@ class Observation:
     raw_percent: float | None
     deficit_mm: float | None
     deficit_age_s: float | None = None
+    #: Age of the newest word from *any* entity of the probe's device. The
+    #: liveness sentinel proper; ``None`` when the device could not be resolved,
+    #: which is when the temperature channel below has to answer instead.
+    device_age_s: float | None = None
     probe_temperature_c: float | None = None
     probe_temperature_age_s: float | None = None
     ambient_temperature_c: float | None = None
+    #: Battery level of the probe's device, when it publishes one [percent].
+    battery_percent: float | None = None
     irrigation_active: bool = False
     seconds_since_irrigation: float | None = None
     #: Rain is falling now, or stopped too recently to call the event over.
@@ -102,10 +128,14 @@ class AdmissionPolicy:
 
     Defaults are chosen for a garden bed with a daily irrigation cycle: sample at
     most every ten minutes (a probe reports far more often than the soil changes),
-    trust a deficit for half an hour, declare a probe dead after two hours of
-    silence, wait three hours after irrigation for the wetting front to
-    redistribute, and refuse anything below two degrees because the permittivity
-    of frozen water is nothing like that of liquid water.
+    trust a deficit for half an hour, wait three hours after irrigation for the
+    wetting front to redistribute, and refuse anything below two degrees because
+    the permittivity of frozen water is nothing like that of liquid water.
+
+    ``probe_timeout_s`` is no longer the verdict on a silent probe, only the bar
+    used until the probe has demonstrated a cadence of its own (see
+    :class:`~.liveness.ProbeCadence`). It keeps its name and its default so that
+    an installation which tuned it keeps what it tuned.
     """
 
     min_sample_interval_s: float = 600.0
@@ -114,6 +144,13 @@ class AdmissionPolicy:
     drainage_minutes: float = 180.0
     min_soil_temperature_c: float = 2.0
     require_probe_temperature: bool = False
+    #: Battery level below which readings stop being evidence [percent]. Five
+    #: rather than ten or zero: at five percent these devices are within days of
+    #: silence and their excitation voltage is already sagging, which shifts the
+    #: index without shifting the soil; while a floor high enough to be
+    #: comfortable would stop a calibration on a probe that still has a month of
+    #: honest readings in it. Zero disables the check.
+    min_battery_percent: float = 5.0
 
     @property
     def drainage_seconds(self) -> float:
@@ -129,6 +166,7 @@ class AdmissionPolicy:
             "drainage_minutes": self.drainage_minutes,
             "min_soil_temperature_c": self.min_soil_temperature_c,
             "require_probe_temperature": self.require_probe_temperature,
+            "min_battery_percent": self.min_battery_percent,
         }
 
     @classmethod
@@ -142,6 +180,7 @@ class AdmissionPolicy:
             drainage_minutes=float(data.get("drainage_minutes", blank.drainage_minutes)),
             min_soil_temperature_c=float(data.get("min_soil_temperature_c", blank.min_soil_temperature_c)),
             require_probe_temperature=bool(data.get("require_probe_temperature", blank.require_probe_temperature)),
+            min_battery_percent=float(data.get("min_battery_percent", blank.min_battery_percent)),
         )
 
 
@@ -235,16 +274,33 @@ class Admission:
         return cls(accepted=True, sample=sample, reason=None)
 
 
-def probe_liveness(observation: Observation, policy: AdmissionPolicy) -> ProbeLiveness:
-    """Read the temperature sentinel and say whether the probe is still reporting.
+def probe_liveness(
+    observation: Observation,
+    policy: AdmissionPolicy,
+    cadence: ProbeCadence | None = None,
+) -> ProbeLiveness:
+    """Say whether the probe's device has spoken recently enough to be believed.
 
-    ``UNKNOWN`` is returned when the device exposes no temperature channel at
-    all. That is not a failure, it is a missing sentinel, and the difference
-    matters: an unknown liveness must not make the probe look dead.
+    The device where it can be resolved, the temperature channel where it cannot.
+    That order and not the reverse: a registry that will not answer must not turn
+    every probe into a dead one, so the fallback is the behaviour this check had
+    before it learned about devices.
+
+    The bar comes from ``cadence`` when one is supplied, which is the whole point
+    of it: one probe publishes every thirty seconds and another twice a day, and
+    ``policy.probe_timeout_s`` would call one of them dead. Without a cadence the
+    configured timeout is used, which is what an installation that never reaches
+    three ended silences continues to get.
     """
-    if observation.probe_temperature_age_s is None:
+    age_s = observation.device_age_s
+    if age_s is None:
+        age_s = observation.probe_temperature_age_s
+    if age_s is None:
         return ProbeLiveness.UNKNOWN
-    if observation.probe_temperature_age_s > policy.probe_timeout_s:
+    bar_s = policy.probe_timeout_s
+    if cadence is not None:
+        bar_s = cadence.bar_s(observation.taken_at.timestamp(), policy.probe_timeout_s)
+    if age_s > bar_s:
         return ProbeLiveness.STALE
     return ProbeLiveness.ALIVE
 
@@ -255,6 +311,8 @@ def evaluate(
     soil: SoilProfile,
     cycle_index: int,
     seconds_since_last_sample: float | None,
+    cadence: ProbeCadence | None = None,
+    sensing_stalled: bool = False,
 ) -> Admission:
     """Decide whether an observation becomes a sample, in the order that matters.
 
@@ -262,6 +320,12 @@ def evaluate(
     freshness, freshness before physics, physics before rate limiting. It is
     written this way so that the reported reason is the *first* thing wrong, not
     whichever check happened to run last.
+
+    ``sensing_stalled`` is passed in rather than computed here because the finding
+    needs history and this function is pure over one observation. Its place in the
+    order is deliberate: a stalled electrode outranks every physical check below
+    it, since none of those means anything about a number the probe is no longer
+    measuring.
     """
     if observation.raw_percent is None:
         return Admission.refuse(RejectionReason.PROBE_UNAVAILABLE)
@@ -272,11 +336,23 @@ def evaluate(
     if observation.deficit_age_s is not None and observation.deficit_age_s > policy.max_deficit_age_s:
         return Admission.refuse(RejectionReason.DEFICIT_STALE)
 
-    liveness = probe_liveness(observation, policy)
+    liveness = probe_liveness(observation, policy, cadence)
     if liveness is ProbeLiveness.STALE:
         return Admission.refuse(RejectionReason.PROBE_STALE)
     if liveness is ProbeLiveness.UNKNOWN and policy.require_probe_temperature:
         return Admission.refuse(RejectionReason.MISSING_PROBE_TEMPERATURE)
+    if sensing_stalled:
+        return Admission.refuse(RejectionReason.PROBE_SENSING_STALLED)
+    # A reported zero is treated as no information rather than as an empty
+    # battery. A device that is talking cannot truthfully be at zero percent, so
+    # zero is a device reporting its battery badly, and refusing every sample from
+    # one of those would cost the calibration for a bug in an unrelated channel.
+    if (
+        policy.min_battery_percent > 0
+        and observation.battery_percent is not None
+        and 0.0 < observation.battery_percent < policy.min_battery_percent
+    ):
+        return Admission.refuse(RejectionReason.BATTERY_CRITICAL)
 
     if observation.irrigation_active:
         return Admission.refuse(RejectionReason.IRRIGATION_ACTIVE)

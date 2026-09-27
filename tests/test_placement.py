@@ -11,7 +11,15 @@ from __future__ import annotations
 import random
 from datetime import datetime, timedelta
 
-from helpers import RAW_AT_FIELD_CAPACITY, RAW_AT_WILTING_POINT, loam, probe_index, run_cycles
+from helpers import (
+    RAW_AT_FIELD_CAPACITY,
+    RAW_AT_WILTING_POINT,
+    dead_probe,
+    loam,
+    probe_index,
+    run_cycles,
+    weakly_responding_probe,
+)
 from model import (
     CalibrationSession,
     PlacementConfidence,
@@ -268,18 +276,38 @@ def test_the_synthetic_probe_is_judged_plausible():
 
 
 def test_a_probe_outside_the_wetted_volume_is_caught_end_to_end():
-    """The same run, with a probe that reports the same index whatever the soil does."""
+    """The same run, with a probe that follows the soil far too weakly to calibrate."""
     session = CalibrationSession(soil=loam())
-    run_cycles(session, cycles=6, index_fn=lambda soil, deficit, temperature, noise: 50.0 + noise * 0.05)
+    run_cycles(session, cycles=6, index_fn=weakly_responding_probe)
     verdict = session.assess_placement()
     assert verdict.confidence is PlacementConfidence.SUSPECT
     assert verdict.primary is PlacementSuspicion.NO_RESPONSE
+    # Not blamed on the electrode: a weak answer is still an answer, and the two
+    # channels have to stay apart or the advice is wrong half the time.
+    assert not session.sensing_stalled
+    assert verdict.evidence["sensing_stalled"] == 0.0
+
+
+def test_a_dead_electrode_is_not_blamed_on_the_placement():
+    """A probe that does not move at all is a fault of its own, not a bad position.
+
+    The signature is the same, ``median_raw_span`` at zero, and the repair is not:
+    the placement advice ends in "move the probe", and a user who digs one up will
+    find it just as motionless in the new hole. So ``NO_RESPONSE`` is withheld and
+    the reason for withholding it is on the record.
+    """
+    session = CalibrationSession(soil=loam())
+    run_cycles(session, cycles=6, index_fn=dead_probe)
+    verdict = session.assess_placement()
+    assert session.sensing_stalled
+    assert PlacementSuspicion.NO_RESPONSE not in verdict.suspicions
+    assert verdict.evidence["sensing_stalled"] == 1.0
 
 
 def test_placement_never_touches_the_calibration():
     """The diagnostic describes; only the gates decide. Asserted, not assumed."""
     session = CalibrationSession(soil=loam())
-    run_cycles(session, cycles=6, index_fn=lambda soil, deficit, temperature, noise: 50.0 + noise * 0.05)
+    run_cycles(session, cycles=6, index_fn=weakly_responding_probe)
     before = session.status
     session.assess_placement()
     assert session.status is before
